@@ -1,0 +1,51 @@
+This file contains message digests of all files listed in MANIFEST,
+signed via the Module::Signature module, version 0.55.
+
+To verify the content in this distribution, first make sure you have
+Module::Signature installed, then type:
+
+    % cpansign -v
+
+It will check each file's integrity, as well as the signature's
+validity.  If "==> Signature verified OK! <==" is not displayed,
+the distribution may already have been compromised, and you should
+not run its Makefile.PL or Build.PL.
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+SHA1 8624bcdae55baeef00cd11d5dfcfa60f68710a02 COPYING
+SHA1 2ea2e0915c2f8fb048837132bd710d2445aa8851 MANIFEST
+SHA1 581fb4b75bc978e7c628a050e262847057907a1f META.yml
+SHA1 43e33851fd0dd898f7a0ebff4d51d0784d544f61 Makefile.PL
+SHA1 96f063765d717cd7911a28936fc5b70834b37e5d README
+SHA1 5fbea53611f0806a883eefbdf94769f8c0b07e86 debian/changelog
+SHA1 1b6453892473a467d07372d45eb05abc2031647a debian/compat
+SHA1 2a65448d137816c1c6f4ac1792c2a2687347053a debian/control
+SHA1 fcc680a78f6ee346aecb4af617e5bb68b70194f9 debian/copyright
+SHA1 920561690b29620003c362dc50bc5f38ba639b9f debian/rules
+SHA1 17db53b48968efb043bdd0974fc6a960765c164e debian/watch
+SHA1 1b3aff408754b5e8f887f390ad94f38117c7f92d devel/cross-image.pl
+SHA1 5a349451d3b32326cd8a74b545e5b84169bc553b devel/cross-screenshot.pl
+SHA1 9884086b6570a6f4ffd7861d044b8d66e6c7a7ad devel/cross-textview.pl
+SHA1 29989305a516b3be70677f3e3c67b83dd6efab16 devel/cross-ticker.pl
+SHA1 38d76d19d70b3b3656a571d114b630f6dd60156b devel/cross.pl
+SHA1 d1ab5e44cf567f140d3950c08dcf923d92e64bfc devel/lasso-entry.pl
+SHA1 901c25554f76998850923b9a6f2f9e7758a9e905 devel/lasso-screenshot.pl
+SHA1 7aaa06241d0311c838cb31dd17f49e123ce32226 devel/lasso.pl
+SHA1 6956f08a1db9d782d7ffe49c55c03d381f510d2b examples/cross-area.pl
+SHA1 1be1c897acdb72324d493055ffd302aa4ac4f1ea examples/cross-label.pl
+SHA1 0d5d7d59d734e0782170c3b0171ce6cd38b77a32 examples/lasso-area.pl
+SHA1 29168770227d6d7be2d723c45efd5377ee38f440 lib/Gtk2/Ex/CrossHair.pm
+SHA1 e8bd771e330c04fa27c61be0b02158509d4b238c lib/Gtk2/Ex/Lasso.pm
+SHA1 3c398158e8d0a7df2daec0feea8aa473bf1e693a lib/Gtk2/Ex/Xor.pm
+SHA1 a4d7618186230c611f1b4bcfd3f72058e7d23720 t/CrossHair.t
+SHA1 4d2ae5059dc5129146a97061d54e9328a4d96fe2 t/Lasso.t
+SHA1 a661a39e55a4127aecb1b97a631c4f01f7dce8c6 t/pod.t
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (GNU/Linux)
+
+iD8DBQFIYZvoLFMCIV9q3ToRAgKMAJ4hBAXEL5dNGF2vKTo+iVRnILp6hwCdH3Av
+ZmP70FeGpSM5RXYqyzOxENs=
+=sF6c
+-----END PGP SIGNATURE-----

@@ -1,0 +1,29 @@
+COPYING
+debian/changelog
+debian/compat
+debian/control
+debian/copyright
+debian/rules
+debian/watch
+devel/cross-image.pl
+devel/cross-screenshot.pl
+devel/cross-textview.pl
+devel/cross-ticker.pl
+devel/cross.pl
+devel/lasso-entry.pl
+devel/lasso-screenshot.pl
+devel/lasso.pl
+examples/cross-area.pl
+examples/cross-label.pl
+examples/lasso-area.pl
+lib/Gtk2/Ex/CrossHair.pm
+lib/Gtk2/Ex/Lasso.pm
+lib/Gtk2/Ex/Xor.pm
+Makefile.PL
+MANIFEST			This list of files
+README
+SIGNATURE
+t/CrossHair.t
+t/Lasso.t
+t/pod.t
+META.yml                                 Module meta-data (added by MakeMaker)

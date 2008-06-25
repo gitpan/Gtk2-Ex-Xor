@@ -1,0 +1,18 @@
+Source: libgtk2-ex-xor-perl
+Section: perl
+Priority: optional
+Build-Depends: cdbs, debhelper (>= 4)
+Maintainer: Kevin Ryde <user42@zip.com.au>
+Standards-Version: 3.8.0
+Homepage: http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html
+Bugs: mailto:user42@zip.com.au
+
+Package: libgtk2-ex-xor-perl
+Architecture: all
+Depends: libgtk2-perl, libglib-ex-objectbits-perl
+Description: Crosshair drawing and lasso selection using XORs
+ Gtk2::Ex::CrossHair draws horizontal and vertical lines as a visual
+ guide.
+ .
+ Gtk2::Ex::Lasso selects a rectangular area of a widget, drawing a box
+ as the user moves the mouse.
