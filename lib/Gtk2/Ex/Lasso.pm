@@ -19,11 +19,13 @@ package Gtk2::Ex::Lasso;
 use strict;
 use warnings;
 use Carp;
-use Gtk2;
 use List::Util qw(min max);
 use Scalar::Util;
 
-our $VERSION = 1;
+use Gtk2;
+use Gtk2::Ex::Xor;
+
+our $VERSION = 2;
 
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
@@ -137,7 +139,6 @@ sub start {
   my $widget = $self->{'widget'} or croak 'Lasso has no widget';
   if (DEBUG) { print "Lasso start\n"; }
 
-  require Gtk2::Ex::Xor;
   my $window = $widget->Gtk2_Ex_Xor_window
     or croak 'Lasso->start(): unrealized widget not (yet) supported';
 
@@ -182,25 +183,25 @@ sub start {
      $widget->signal_connect (grab_broken_event => \&_do_grab_broken,
                               $ref_weak_self),
      $widget->signal_connect_after (expose_event => \&_do_expose,
+                                    $ref_weak_self),
+     $widget->signal_connect_after (size_allocate => \&_do_size_allocate,
                                     $ref_weak_self));
 
   $self->{'snooper_id'} = Gtk2->key_snooper_install
     (\&_do_key_snooper, $ref_weak_self);
 
   my ($x, $y) = (Scalar::Util::blessed($event) && $event->can('x')
-                 ? ($event->x, $event->y)
+                 ? Gtk2::Ex::Xor::_event_widget_coords ($widget, $event)
                  : $widget->get_pointer);
-  ($x, $y) = _window_constrain_coords ($window, $x, $y);
   if (DEBUG) { print "  initial $x,$y\n"; }
-  $self->{'x1'} = $x;
+
+  $self->{'x1'} = $x+1; # always initial "moved" emission
   $self->{'y1'} = $y;
   $self->{'x2'} = $x;
   $self->{'y2'} = $y;
   $self->{'drawn'} = 0;
-  _draw ($self);
-
   $self->notify ('active');
-  $self->signal_emit ('moved', $x,$y, $x,$y);
+  _maybe_move ($self, $x,$y, $x,$y);
 }
 
 sub end {
@@ -280,6 +281,8 @@ sub _do_expose {
   }
 }
 
+# 'motion-notify' on widget, and also called for $lasso->end if it gets a
+# button or motion event
 sub _do_motion_notify {
   my ($widget, $event, $ref_weak_self) = @_;
   my $self = $$ref_weak_self or return;
@@ -288,31 +291,36 @@ sub _do_motion_notify {
   # Maybe should use $display->get_state here instead of just get_pointer,
   # but the crosshair at present only works with the mouse, not an arbitrary
   # input device.
-  my ($x, $y);
-  if ($event->can('is_hint') # for final button release event
-      && $event->is_hint) {
-    ($x, $y) = $widget->get_pointer;
-  } else {
-    $x = $event->x;
-    $y = $event->y;
-  }
-
-  my $window = $event->window;
-  ($x, $y) = _window_constrain_coords ($window, $x, $y);
-
-  if ($x != $self->{'x2'} || $y != $self->{'y2'}) {
-    if ($self->{'drawn'}) {
-      if (DEBUG) { print "  undraw\n"; }
-      _draw ($self);
-    }
-    $self->{'x2'} = $x;
-    $self->{'y2'} = $y;
-    _draw ($self);
-    $self->signal_emit ('moved', $self->{'x1'}, $self->{'y1'},  $x, $y);
-  }
-
+  my ($x, $y) = ($event->can('is_hint') # not in final button release event
+                 && $event->is_hint
+                 ? $widget->get_pointer
+                 : Gtk2::Ex::Xor::_event_widget_coords ($widget, $event));
+  _maybe_move ($self, $self->{'x1'}, $self->{'y1'}, $x, $y);
   return 0; # propagate event
 }
+
+# 'size-allocate' signal on the widget.
+#
+# The effect here is to re-constrain the x1,y1 position, in case it's now
+# outside the allocated area, and to recheck the pointer position at x2,y2
+# in case it's now outside, or now back inside, the allocated area
+#
+# x1,y1 is not moved (only reconstrained), so if $widget moves then that
+# x1,y1 stays at the same position relative to the widget top-left 0,0.
+# There's probably other sensible things to do with it, like anchor to a
+# different edge, or a proportion of the size, etc, but a widget move during
+# a lasso should be rare, so as long as it doesn't catch fire it should be
+# fine for now.
+#
+sub _do_size_allocate {
+  my ($widget, $alloc, $ref_weak_self) = @_;
+  my $self = $$ref_weak_self or return;
+  # re-run allocation constraints
+  _maybe_move ($self,
+               $self->{'x1'}, $self->{'y1'},
+               $widget->get_pointer);
+}
+
 
 sub _do_button_release {
   my ($widget, $event, $ref_weak_self) = @_;
@@ -321,6 +329,32 @@ sub _do_button_release {
     $self->end ($event);
   }
   return 0; # propagate event
+}
+
+sub _maybe_move {
+  my ($self, $x1,$y1, $x2,$y2) = @_;
+  my $widget = $self->{'widget'};
+
+  ($x1,$y1) = _widget_constrain_coords ($widget, $x1,$y1);
+  ($x2,$y2) = _widget_constrain_coords ($widget, $x2,$y2);
+
+  if (   $x1 == $self->{'x1'}
+      && $y1 == $self->{'y1'}
+      && $x2 == $self->{'x2'}
+      && $y2 == $self->{'y2'}) {
+    return;
+  }
+
+  if ($self->{'drawn'}) {
+    if (DEBUG) { print "  undraw\n"; }
+    _draw ($self);
+  }
+  $self->{'x1'} = $x1;
+  $self->{'y1'} = $y1;
+  $self->{'x2'} = $x2;
+  $self->{'y2'} = $y2;
+  _draw ($self);
+  $self->signal_emit ('moved', $x1,$y1, $x2,$y2);
 }
 
 sub _undraw {
@@ -332,9 +366,10 @@ sub _draw {
   if (DEBUG) { print "   _draw  ",$clip_region||'noclip',"\n"; }
   my $widget = $self->{'widget'};
 
-  require Gtk2::Ex::Xor;
   my $win = $widget->Gtk2_Ex_Xor_window
-    or return;  # possible undef when unrealized in destruction
+    || return;  # possible undef when unrealized in destruction
+  my ($off_x, $off_y) = ($win != $widget->window
+                         ? $win->get_position : (0, 0));
   my $gc = ($self->{'gc'} ||= do {
     Gtk2::Ex::Xor::get_gc ($widget, $self->{'foreground'},
                            line_width => ($self->{'line_width'} || 0),
@@ -344,8 +379,8 @@ sub _draw {
 
   if ($clip_region) { $gc->set_clip_region ($clip_region); }
   _draw_rectangle_corners ($win, $gc, 0,
-                           $self->{'x1'}, $self->{'y1'},
-                           $self->{'x2'}, $self->{'y2'});
+                           $self->{'x1'} - $off_x, $self->{'y1'} - $off_y,
+                           $self->{'x2'} - $off_x, $self->{'y2'} - $off_y);
   if ($clip_region) { $gc->set_clip_region (undef); }
   $self->{'drawn'} = 1;
 }
@@ -353,17 +388,15 @@ sub _draw {
 sub swap_corners {
   my ($self) = @_;
   if (! $self->{'active'}) { return; }
+
   my $x1 = $self->{'x1'};
   my $y1 = $self->{'y1'};
-  my $x2 = $self->{'x2'};
-  my $y2 = $self->{'y2'};
-  $self->{'x1'} = $x2;
-  $self->{'y1'} = $y2;
-  $self->{'x2'} = $x1;
-  $self->{'y2'} = $y1;
+  _maybe_move ($self,
+               $self->{'x2'}, $self->{'y2'},
+               $self->{'x1'}, $self->{'y1'});
   _widget_warp_pointer ($self->{'widget'}, $x1, $y1);
-  $self->signal_emit ('moved', $x2,$y2, $x1,$y1);
 }
+
 
 # key snooper callback
 sub _do_key_snooper {
@@ -426,6 +459,13 @@ sub _draw_rectangle_corners {
                              abs ($y1 - $y2) + ($filled ? 1 : 0));
 }
 
+sub _widget_constrain_coords {
+  my ($widget, $x, $y) = @_;
+  my $alloc = $widget->allocation;
+  return (max (0, min ($alloc->width-1,  $x)),
+          max (0, min ($alloc->height-1, $y)));
+}
+
 # $window->get_size is the most recent configure-event report, it doesn't
 # make a server round-trip
 sub _window_constrain_coords {
@@ -436,12 +476,6 @@ sub _window_constrain_coords {
 }
 
 # Warp the mouse pointer to ($x,$y) in $widget coordinates.
-#
-# $window->get_origin does a server round-trip to get the widget window
-# position.  Suspect it's probably not reliable to search upwards though
-# $window->get_position, not sure that gdk maintains position info for , because generally gdk doesn't have window position
-# information for the window manager frames etc which a toplevel window is
-# within (and it seems may even mis-classify them as 'root' window_type).
 #
 sub _widget_warp_pointer {
   my ($widget, $x, $y) = @_;
@@ -530,10 +564,10 @@ feedback while selecting.
         +-------------------------+
 
 The lasso is activated by the C<start> function (see L</FUNCTIONS>).  You
-setup your button press or keypress code to call that when desired.  When
-started from a button press the lasso is active while the button is held
-down, ie. a drag.  This is the usual way, but you can also begin from a
-keypress, or even something strange like a menu entry.
+setup your button press or keypress code to call that.  When started from a
+button the lasso is active while the button is held down, ie. a drag.  This
+is the usual way, but you can also begin from a keypress, or even something
+strange like a menu entry.
 
 The following keys are recognised while lassoing,
 
@@ -602,8 +636,7 @@ The target widget to act on.
 =item C<active> (boolean, default false)
 
 True while lasso selection is in progress.  Turning this on or off is the
-same as calling C<start> or C<end> above, but you can't pass a button press
-events.
+same as calling C<start> or C<end> above (except you can't pass events).
 
 =item C<foreground> (scalar, default C<undef>)
 
@@ -653,17 +686,19 @@ only really suitable for a widget with a single dominant background pixel.
 
 Expose events during lasso selection work, though they assume the target
 widget's expose redraws only the expose event region given, as opposed to
-doing a full window redraw.  Clipping is usual, and indeed desirable.
+doing a full window redraw.  Clipping the redraw is usual, and indeed
+desirable.
 
 Keypresses are obtained from the Gtk "snooper" mechanism, so they work even
-if the lasso target widget doesn't have the focus, even when it's a no-focus
-widget.  Keys not for the lasso are propagated in the usual way.
+if the lasso target widget doesn't have the focus, including when it's a
+no-focus widget.  Keys not for the lasso are propagated in the usual way.
 
-When the lasso is started from a keypress etc, ie. not a button drag, an
+When the lasso is started from a keypress etc, not a button drag, an
 explicit pointer grab is used so motion outside the widget window can be
 seen.  In the current code a further C<start> call with a button press event
 will switch to drag mode, so the corresponding release has the expected
-effect.  But perhaps in the future the way this works will change a bit.
+effect.  But maybe that's a bit obscure, so perhaps in the future the way
+this works will change.
 
 =head1 BUGS
 

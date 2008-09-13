@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Gtk2-Ex-Xor
-version:             1
+version:             2
 abstract:            Helpers for Gtk2 widgets.
 license:             gpl
 author:              
@@ -15,3 +15,8 @@ requires:
 meta-spec:
     url:     http://module-build.sourceforge.net/META-spec-v1.3.html
     version: 1.3
+no_index:
+    directory:
+        - devel
+resources:
+    homepage: http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html

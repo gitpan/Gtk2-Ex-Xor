@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 # Copyright 2008 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
@@ -18,11 +20,36 @@
 
 use strict;
 use warnings;
-use Test::More tests => 8;
 use Gtk2::Ex::Lasso;
+use Test::More tests => 8;
 
 ok ($Gtk2::Ex::Lasso::VERSION >= 1);
 ok (Gtk2::Ex::Lasso->VERSION >= 1);
+
+sub main_iterations {
+  my $count = 0;
+  while (Gtk2->events_pending) {
+    $count++;
+    Gtk2->main_iteration_do (0);
+  }
+  print "main_iterations(): ran $count events/iterations\n";
+}
+
+sub show_wait {
+  my ($widget) = @_;
+  my $t_id = Glib::Timeout->add (10_000, sub {
+                                   print "Timeout waiting for map event\n";
+                                   exit 1;
+                                 });
+  my $s_id = $widget->signal_connect (map_event => sub {
+                                        Gtk2->main_quit;
+                                        return 0; # propagate event
+                                      });
+  $widget->show;
+  Gtk2->main;
+  $widget->signal_handler_disconnect ($s_id);
+  Glib::Source->remove ($t_id);
+}
 
 SKIP: {
   require Gtk2;
@@ -34,14 +61,6 @@ SKIP: {
     return [ grep /Gtk2::Ex::Lasso/, keys %$widget ];
   }
 
-  sub main_iterations {
-    my $count = 0;
-    while (Gtk2->events_pending) {
-      $count++;
-      Gtk2->main_iteration_do (0);
-    }
-    print "main_iterations(): ran $count events/iterations\n";
-  }
 
   # destroyed when weakened inactive
   {
@@ -62,8 +81,7 @@ SKIP: {
   {
     my $widget = Gtk2::Window->new ('toplevel');
     my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
-    $widget->show;
-    main_iterations();
+    show_wait ($widget);
     $lasso->start;
     my $weak_lasso = $lasso;
     Scalar::Util::weaken ($weak_lasso);
@@ -77,8 +95,7 @@ SKIP: {
   # start() emits "notify::active"
   {
     my $widget = Gtk2::Window->new ('toplevel');
-    $widget->show;
-    main_iterations();
+    show_wait ($widget);
     my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
     my $seen_notify = 0;
     $lasso->signal_connect ('notify::active' => sub { $seen_notify = 1; });
@@ -90,8 +107,7 @@ SKIP: {
   # end() emits "notify::active"
   {
     my $widget = Gtk2::Window->new ('toplevel');
-    $widget->show;
-    main_iterations();
+    show_wait ($widget);
     my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
     $lasso->start;
     my $seen_notify = 0;

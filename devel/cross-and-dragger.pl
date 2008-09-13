@@ -22,39 +22,45 @@ use strict;
 use warnings;
 use Gtk2 '-init';
 use Gtk2::Ex::CrossHair;
+use Gtk2::Ex::Dragger;
 use Data::Dumper;
 
 use File::Basename;
 my $progname = basename($0);
 
-Gtk2::Gdk::Window->set_debug_updates (1);
-
 my $toplevel = Gtk2::Window->new('toplevel');
 $toplevel->signal_connect (destroy => sub { Gtk2->main_quit });
-$toplevel->set_flags(['can-focus']);
-$toplevel->grab_focus;
+$toplevel->set_size_request (150, 150);
 
-# my $image = Gtk2::Label->new
-#   ('no fjkdsj fksd jfkd sk
-# such fjdks jfksd jfks jf sd
-# file dfjksjfksd fjsdk
-# ');
+my $scrolled = Gtk2::ScrolledWindow->new;
+$toplevel->add ($scrolled);
+
+my $viewport = Gtk2::Viewport->new;
+$scrolled->add ($viewport);
 
 my $image = Gtk2::Image->new_from_file
   ('/usr/share/doc/libgtk2.0-doc/gtk/tree-view-coordinates.png');
-$toplevel->add ($image);
+$scrolled->add_with_viewport ($image);
 
-my $cross = Gtk2::Ex::CrossHair->new (widgets => [ $toplevel ],
-                                      foreground => 'orange',
-                                      # line_style => 'on_off_dash',
-                                     );
+my $cross = Gtk2::Ex::CrossHair->new (widgets => [ $viewport ],
+                                      foreground => 'orange');
+my $dragger = Gtk2::Ex::Dragger->new
+  (widget => $viewport,
+   hadjustment => $scrolled->get('hadjustment'),
+   vadjustment => $scrolled->get('vadjustment'),
+   cursor => 'fleur');
+
 $toplevel->add_events (['button-press-mask', 'key-press-mask']);
 $toplevel->signal_connect
   (button_press_event =>
    sub {
      my ($widget, $event) = @_;
-     print "$progname: start button $widget\n";
-     $cross->start ($event);
+     if ($event->button == 1) {
+       print "$progname: start button $widget\n";
+       $cross->start ($event);
+     } else {
+       $dragger->start ($event);
+     }
    });
 $toplevel->signal_connect
   (key_press_event =>
@@ -62,7 +68,15 @@ $toplevel->signal_connect
      my ($widget, $event) = @_;
      if ($event->keyval == Gtk2::Gdk->keyval_from_name('Escape')) {
        print "$progname: end key\n";
-       $cross->end;
+       $cross->end ($event);
+       $dragger->stop ($event);
+       print Dumper($cross);
+       print "\n";
+       print Dumper($dragger);
+       print "\n";
+       Scalar::Util::weaken ($viewport->{'Gtk2::Ex::WidgetCursor.installed'});
+       my $wc = $viewport->{'Gtk2::Ex::WidgetCursor.installed'};
+       print "x\n";
 
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('space')) {
        print "$progname: start key\n";

@@ -39,12 +39,21 @@ $frame->add ($vbox1);
 my $vbox = Gtk2::VBox->new (0, 0);
 $hbox->pack_start ($vbox, 1,1,0);
 
+my $area1_width = 400;
+my $area1_height = 200;
+
+my $layout = Gtk2::Layout->new;
+$layout->set_size_request ($area1_width+20, $area1_height+20);
+$vbox->pack_start ($layout, 1, 1, 0);
+
 my $area1 = Gtk2::DrawingArea->new;
+$area1->modify_fg ('normal', Gtk2::Gdk::Color->parse ('white'));
+$area1->modify_bg ('normal', Gtk2::Gdk::Color->parse ('black'));
 $area1->set_name ('one');
 $area1->set_size_request (400, 200);
 $area1->set_flags ('can-focus');
 $area1->grab_focus;
-$vbox->add ($area1);
+$layout->add ($area1);
 
 {
   my $label = Gtk2::Label->new (" xxx ");
@@ -193,6 +202,72 @@ $area1->signal_connect
                                  ($button->get_active);
                            });
   $vbox1->pack_start ($button, 0,0,0);
+}
+{
+  my $timer_id;
+  my $idx = 0;
+  my @widths = (400, 350, 300, 350);
+  my $button = Gtk2::CheckButton->new_with_label ('Resizing');
+  $button->set_tooltip_markup
+    ("Check this to resize the DrawingArea under a timer, to test lasso recalc when some of it goes outside the new size");
+  $vbox1->pack_start ($button, 0,0,0);
+  $button->signal_connect ('toggled' => sub {
+                             if ($button->get_active) {
+                               $timer_id ||= do {
+                                 print __FILE__,": resizing start\n";
+                                 Glib::Timeout->add (1000, \&resizing_timer);
+                               };
+                             } else {
+                               if ($timer_id) {
+                                 print __FILE__,": resizing stop\n";
+                                 Glib::Source->remove ($timer_id);
+                                 $timer_id = undef;
+                               }
+                             }
+                           });
+  sub resizing_timer {
+    $idx++;
+    if ($idx >= @widths) {
+      $idx = 0;
+    }
+    my $width = $widths[$idx];
+    print __FILE__,": resize to $width,$area1_height\n";
+    $area1->set_size_request ($width, $area1_height);
+    return 1; # keep running
+  }
+}
+{
+  my $timer_id;
+  my $idx = 0;
+  my @x = (0, 50, 100, 50);
+  my $button = Gtk2::CheckButton->new_with_label ('Repositioning');
+  $button->set_tooltip_markup
+    ("Check this to resize the DrawingArea under a timer, to test lasso recalc when some of it goes outside the new size");
+  $vbox1->pack_start ($button, 0,0,0);
+  $button->signal_connect ('toggled' => sub {
+                             if ($button->get_active) {
+                               $timer_id ||= do {
+                                 print __FILE__,": repositioning start\n";
+                                 Glib::Timeout->add (1000, \&repositioning_timer);
+                               };
+                             } else {
+                               if ($timer_id) {
+                                 print __FILE__,": repositioning stop\n";
+                                 Glib::Source->remove ($timer_id);
+                                 $timer_id = undef;
+                               }
+                             }
+                           });
+  sub repositioning_timer {
+    $idx++;
+    if ($idx >= @x) {
+      $idx = 0;
+    }
+    my $x = $x[$idx];
+    print __FILE__,": reposition to $x,0\n";
+    $layout->move ($area1, $x, 0);
+    return 1; # keep running
+  }
 }
 
 $toplevel->show_all;

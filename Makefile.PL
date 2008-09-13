@@ -24,7 +24,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile
   (NAME         => 'Gtk2-Ex-Xor',
    ABSTRACT     => 'Helpers for Gtk2 widgets.',
-   VERSION      => 1,
+   VERSION_FROM => 'lib/Gtk2/Ex/Xor.pm',
    AUTHOR       => 'Kevin Ryde <user42@zip.com.au>',
    LICENSE      => 'gpl',
    SIGN         => 1,
@@ -42,6 +42,14 @@ WriteMakefile
                     'Scalar::Util' => 0,
                    },
    clean        => { FILES => "CrossHair.html Lasso.html" },
+
+   EXTRA_META => <<'HERE',
+no_index:
+    directory:
+        - devel
+resources:
+    homepage: http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html
+HERE
   );
 
 sub MY::postamble {
@@ -66,16 +74,16 @@ Lasso.html: lib/Gtk2/Ex/Lasso.pm Makefile
 	| sed 's!http://search.cpan.org/perldoc?Gtk2%3A%3A\([^"%]*\)"!http://gtk2-perl.sourceforge.net/doc/pod/Gtk2/\1.html"!' \
 	  >Lasso.html
 
-CHECKFILES = $(TO_INST_PM) t/*.t examples/*.pl devel/*.pl
+LINT_FILES = $(TO_INST_PM) t/*.t examples/*.pl devel/*.pl
 lint:
-	perl -MO=Lint $(CHECKFILES)
-	podchecker    $(CHECKFILES)
+	perl -MO=Lint $(LINT_FILES)
+	podchecker    $(LINT_FILES)
 pc:
-	perlcritic $(CHECKFILES)
+	perlcritic $(LINT_FILES)
 
 # find files in the dist with mod times this year, but without this year in
 # the copyright line
-copyright-years-check: Gtk2-Ex-Xor-$(VERSION).tar.gz
+copyright-years-check:
 	year=`date +%Y`; \
 	tar tvfz Gtk2-Ex-Xor-$(VERSION).tar.gz \
 	| grep $$year- \
@@ -102,6 +110,16 @@ copyright-years-check: Gtk2-Ex-Xor-$(VERSION).tar.gz
 debug-constants-check:
 	if egrep -n 'DEBUG => [^0]' $(TO_INST_PM); then exit 1; else exit 0; fi
 
+diff-prev:
+	rm -rf diff.tmp
+	mkdir diff.tmp
+	cd diff.tmp \
+	&& tar xfz ../$(NAME)-`expr $(VERSION) - 1`.tar.gz \
+	&& tar xfz ../$(NAME)-$(VERSION).tar.gz
+	-cd diff.tmp; diff -ur $(NAME)-`expr $(VERSION) - 1` \
+	                       $(NAME)-$(VERSION) >tree.diff
+	-less diff.tmp/tree.diff
+	rm -rf diff.tmp
 
 MAKE_FRAG
 }

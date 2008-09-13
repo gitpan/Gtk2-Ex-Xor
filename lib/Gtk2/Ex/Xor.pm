@@ -24,32 +24,7 @@ use Gtk2;
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
 
-
-sub Gtk2::Widget::Gtk2_Ex_Xor_background {
-  my ($widget) = @_;
-  if (exists $widget->{'Gtk2_Ex_Xor_background'}) {
-    return $widget->{'Gtk2_Ex_Xor_background'};
-  }
-  return $widget->Gtk2_Ex_Xor_background_from_style;
-}
-
-# "bg" is the background for others
-sub Gtk2::Widget::Gtk2_Ex_Xor_background_from_style {
-  my ($widget) = @_;
-  return $widget->get_style->bg ($widget->state);
-}
-
-# "base" is the normal background for text-oriented widgets like Gtk2::Entry
-# and Gtk2::TextView.  Except TextView has multiple windows, so this is
-# meant for the main text window.
-#
-sub Gtk2::Entry::Gtk2_Ex_Xor_background_from_style {
-  my ($widget) = @_;
-  return $widget->get_style->base ($widget->state);
-}
-*Gtk2::TextView::Gtk2_Ex_Xor_background_from_style
-  = \&Gtk2::Entry::Gtk2_Ex_Xor_background_from_style;
-
+our $VERSION = 2;
 
 
 sub get_gc {
@@ -69,15 +44,16 @@ sub get_gc {
       my $str = $fg_color;
       $fg_color = Gtk2::Gdk::Color->parse ($str);
       if (! $fg_color) {
-        carp "Cannot parse colour $str";
+        carp "Gtk2::Gdk::Color->parse() cannot parse '$str' (fallback on style foreground)";
         goto STYLE;
       }
     }
     $colormap->rgb_find_color ($fg_color);
   }
 
-  if (DEBUG) { printf "    pixels fg %#x bg %#x\n",
-                 $fg_color->pixel,$xor_bg_color->pixel; }
+  if (DEBUG) { printf "    pixels fg %#x bg %#x xor %#x\n",
+                 $fg_color->pixel, $xor_bg_color->pixel,
+                   $fg_color->pixel ^ $xor_bg_color->pixel ; }
   my $xor_color = Gtk2::Gdk::Color->new
     (0,0,0, $fg_color->pixel ^ $xor_bg_color->pixel);
 
@@ -91,9 +67,86 @@ sub get_gc {
                         });
 }
 
+sub _event_widget_coords {
+  my ($widget, $event) = @_;
+  my $x = $event->x;
+  my $y = $event->y;
+  my $eventwin = $event->window;
+  if ($eventwin != $widget->window) {
+    my ($wx, $wy) = $eventwin->get_position;
+    if (DEBUG) { print "  subwindow offset $wx,$wy\n"; }
+    $x += $wx;
+    $y += $wy;
+  }
+  return ($x, $y);
+}
 
 
+#------------------------------------------------------------------------------
+# background colour hacks
+
+# default is from the widget's Gtk2::Style, but with an undocumented
+# 'Gtk2_Ex_Xor_background' as an override
+#
+sub Gtk2::Widget::Gtk2_Ex_Xor_background {
+  my ($widget) = @_;
+  if (exists $widget->{'Gtk2_Ex_Xor_background'}) {
+    return $widget->{'Gtk2_Ex_Xor_background'};
+  }
+  return $widget->Gtk2_Ex_Xor_background_from_style;
+}
+
+# "bg" is the background for normal widgets
+sub Gtk2::Widget::Gtk2_Ex_Xor_background_from_style {
+  my ($widget) = @_;
+  return $widget->get_style->bg ($widget->state);
+}
+
+# "base" is the background for text-oriented widgets like Gtk2::Entry and
+# Gtk2::TextView.  TextView has multiple windows, so this is the colour
+# meant for the main text window.
+#
+sub Gtk2::Entry::Gtk2_Ex_Xor_background_from_style {
+  my ($widget) = @_;
+  return $widget->get_style->base ($widget->state);
+}
+*Gtk2::TextView::Gtk2_Ex_Xor_background_from_style
+  = \&Gtk2::Entry::Gtk2_Ex_Xor_background_from_style;
+
+# For Gtk2::Bin subclasses such as Gtk2::EventBox, look at the child's
+# background if there's a child and if it's a no-window widget, since that
+# child is what will be xored over.
+#
+# Perhaps this should be only some of the Bin classes, like Gtk2::Window,
+# EventBox and Alignment.
+#
+package Gtk2::Bin;
+use strict;
+use warnings;
+sub Gtk2_Ex_Xor_background {
+  my ($widget) = @_;
+  # same override as above ...
+  if (exists $widget->{'Gtk2_Ex_Xor_background'}) {
+    return $widget->{'Gtk2_Ex_Xor_background'};
+  }
+  if (my $child = $widget->get_child) {
+    if ($child->flags & 'no-window') {
+      return $child->Gtk2_Ex_Xor_background;
+    }
+  }
+  return $widget->SUPER::Gtk2_Ex_Xor_background;
+}
+package Gtk2::Ex::Xor;
+
+
+#------------------------------------------------------------------------------
+# window choice hacks
+
+# normal "->window" for most widgets
 *Gtk2::Widget::Gtk2_Ex_Xor_window = \&Gtk2::Widget::window;
+
+# for Gtk2::Layout must draw into its "bin_window"
+*Gtk2::Layout::Gtk2_Ex_Xor_window = \&Gtk2::Layout::bin_window;
 
 sub Gtk2::TextView::Gtk2_Ex_Xor_window {
   my ($textview) = @_;
@@ -113,15 +166,15 @@ sub Gtk2::TextView::Gtk2_Ex_Xor_window {
 #
 sub Gtk2::Entry::Gtk2_Ex_Xor_window {
   my ($widget) = @_;
-  my $win = $widget->window
-    or return undef; # if unrealized
-  my ($subwin) = $win->get_children; # first child
-  if ($subwin) {
-    return $subwin;
-  } else {
-    return $widget->SUPER::Gtk2_Ex_Xor_window;
-  }
+  my $win = $widget->window || return undef; # if unrealized
+  return ($win->get_children)[0] # first child
+    || $widget->SUPER::Gtk2_Ex_Xor_window;
 }
+
+# GooCanvas draws on a subwindow too, also undocumented it seems
+# (there's a tmp_window too, but that's only an overlay suppressing some
+# expose events or something at selected times)
+*Goo::Canvas::Gtk2_Ex_Xor_window = \&Gtk2::Entry::Gtk2_Ex_Xor_window;
 
 1;
 __END__

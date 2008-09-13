@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 # Copyright 2008 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
@@ -18,30 +20,46 @@
 
 use strict;
 use warnings;
-use Test::More tests => 10;
 use Gtk2::Ex::CrossHair;
+use Test::More tests => 10;
 
 ok ($Gtk2::Ex::CrossHair::VERSION >= 1);
 ok (Gtk2::Ex::CrossHair->VERSION >= 1);
 
+# return an arrayref
+sub leftover_fields {
+  my ($widget) = @_;
+  return [ grep /Gtk2::Ex::CrossHair/, keys %$widget ];
+}
+
+sub main_iterations {
+  my $count = 0;
+  while (Gtk2->events_pending) {
+    $count++;
+    Gtk2->main_iteration_do (0);
+  }
+  print "main_iterations(): ran $count events/iterations\n";
+}
+
+sub show_wait {
+  my ($widget) = @_;
+  my $t_id = Glib::Timeout->add (10_000, sub {
+                                   print "Timeout waiting for map event\n";
+                                   exit 1;
+                                 });
+  my $s_id = $widget->signal_connect (map_event => sub {
+                                        Gtk2->main_quit;
+                                        return 0; # propagate event
+                                      });
+  $widget->show;
+  Gtk2->main;
+  $widget->signal_handler_disconnect ($s_id);
+  Glib::Source->remove ($t_id);
+}
+
 SKIP: {
   require Gtk2;
   if (! Gtk2->init_check) { skip 'due to no DISPLAY available', 8; }
-
-  # return an arrayref
-  sub leftover_fields {
-    my ($widget) = @_;
-    return [ grep /Gtk2::Ex::CrossHair/, keys %$widget ];
-  }
-
-  sub main_iterations {
-    my $count = 0;
-    while (Gtk2->events_pending) {
-      $count++;
-      Gtk2->main_iteration_do (0);
-    }
-    print "main_iterations(): ran $count events/iterations\n";
-  }
 
 
   # destroyed when weakened on unrealized
@@ -77,7 +95,7 @@ SKIP: {
   {
     my $widget = Gtk2::Window->new ('toplevel');
     my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
-    $widget->show;
+    show_wait ($widget);
     main_iterations();
     $cross->start;
     my $weak_cross = $cross;
