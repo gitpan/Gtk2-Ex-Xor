@@ -24,6 +24,9 @@ use Gtk2 '-init';
 use Gtk2::Ex::CrossHair;
 use Data::Dumper;
 
+use File::Basename;
+my $progname = basename($0);
+
 my $toplevel = Gtk2::Window->new('toplevel');
 $toplevel->signal_connect (destroy => sub { Gtk2->main_quit });
 
@@ -96,7 +99,7 @@ my $cross = Gtk2::Ex::CrossHair->new
   );
 $cross->signal_connect (notify => sub {
                           my ($toplevel, $pspec, $self) = @_;
-                          print __FILE__.": notify '",$pspec->get_name,"'\n";
+                          print "$progname: notify '",$pspec->get_name,"'\n";
                         });
 
 $area1->add_events (['button-press-mask','key-press-mask']);
@@ -104,9 +107,9 @@ $area1->signal_connect
   (button_press_event =>
    sub {
      my ($widget, $event) = @_;
-     print __FILE__.": start button, widget ",$widget->get_name,"\n";
+     print "$progname: start button, widget ",$widget->get_name,"\n";
      $cross->start ($event);
-     print __FILE__,": widget window events ",$widget->window->get_events,"\n";
+     print "$progname: widget window events ",$widget->window->get_events,"\n";
      return 0; # propagate
    });
 $area1->signal_connect
@@ -114,12 +117,12 @@ $area1->signal_connect
    sub {
      my ($widget, $event) = @_;
      if ($event->keyval == Gtk2::Gdk->keyval_from_name('c')) {
-       print __FILE__.": start key $widget\n";
+       print "$progname: start key $widget\n";
        $cross->start ($event);
        return 1; # don't propagate
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('e')) {
        my ($width, $height) = $area1->window->get_size;
-       print __FILE__.": queue draw top left quarter\n";
+       print "$progname: queue draw top left quarter\n";
        $area1->queue_draw_area (0,0, $width/2, $height/2);
        return 1; # don't propagate
      } else {
@@ -132,7 +135,7 @@ $area1->signal_connect
   $vbox1->pack_start ($button, 0,0,0);
   $button->signal_connect
     (clicked => sub {
-       print __FILE__,": start\n";
+       print "$progname: start\n";
        $cross->start;
      });
 }
@@ -141,7 +144,7 @@ $area1->signal_connect
   $vbox1->pack_start ($button, 0,0,0);
   $button->signal_connect
     (clicked => sub {
-       print __FILE__,": end\n";
+       print "$progname: end\n";
        $cross->end;
      });
 }
@@ -150,13 +153,13 @@ $area1->signal_connect
   $vbox1->pack_start ($button, 0,0,0);
   $cross->signal_connect ('notify::active' => sub {
                             my $active = $cross->get ('active');
-                            print __FILE__,": cross notify active $active\n";
+                            print "$progname: cross notify active $active\n";
                             $button->set_active ($active);
                           });
   $button->signal_connect
     (toggled => sub {
        my $active = $button->get_active;
-       print __FILE__,": hint toggled $active\n";
+       print "$progname: hint toggled $active\n";
        $cross->set (active => $active);
      });
 }
@@ -165,7 +168,7 @@ $area1->signal_connect
   $vbox1->pack_start ($button, 0,0,0);
   $button->signal_connect
     (toggled => sub {
-       print __FILE__,": hint toggled\n";
+       print "$progname: hint toggled\n";
 
        my $window = $area1->window;
        my $events = $window->get_events;
@@ -177,7 +180,7 @@ $area1->signal_connect
        $window->set_events ($events);
        
        my ($width, $height) = $area1->window->get_size;
-       print __FILE__,": area1 ${width}x${height} window events ",
+       print "$progname: area1 ${width}x${height} window events ",
          $area1->window->get_events,"\n";
      });
 }
@@ -188,7 +191,7 @@ $area1->signal_connect
   $vbox1->pack_start ($spin, 0,0,0);
   $spin->signal_connect (value_changed => sub {
                            my $value = $spin->get_value;
-                           print __FILE__,": cross line width $value\n";
+                           print "$progname: cross line width $value\n";
                            $cross->set ('line-width' => $value);
                          });
 }
@@ -214,12 +217,12 @@ $area1->signal_connect
   $button->signal_connect ('toggled' => sub {
                              if ($button->get_active) {
                                $timer_id ||= do {
-                                 print __FILE__,": resizing start\n";
+                                 print "$progname: resizing start\n";
                                  Glib::Timeout->add (1000, \&resizing_timer);
                                };
                              } else {
                                if ($timer_id) {
-                                 print __FILE__,": resizing stop\n";
+                                 print "$progname: resizing stop\n";
                                  Glib::Source->remove ($timer_id);
                                  $timer_id = undef;
                                }
@@ -231,7 +234,7 @@ $area1->signal_connect
       $idx = 0;
     }
     my $width = $widths[$idx];
-    print __FILE__,": resize to $width,$area1_height\n";
+    print "$progname: resize to $width,$area1_height\n";
     $area1->set_size_request ($width, $area1_height);
     return 1; # keep running
   }
@@ -247,12 +250,12 @@ $area1->signal_connect
   $button->signal_connect ('toggled' => sub {
                              if ($button->get_active) {
                                $timer_id ||= do {
-                                 print __FILE__,": repositioning start\n";
+                                 print "$progname: repositioning start\n";
                                  Glib::Timeout->add (1000, \&repositioning_timer);
                                };
                              } else {
                                if ($timer_id) {
-                                 print __FILE__,": repositioning stop\n";
+                                 print "$progname: repositioning stop\n";
                                  Glib::Source->remove ($timer_id);
                                  $timer_id = undef;
                                }
@@ -264,8 +267,42 @@ $area1->signal_connect
       $idx = 0;
     }
     my $x = $x[$idx];
-    print __FILE__,": reposition to $x,0\n";
+    print "$progname: reposition to $x,0\n";
     $layout->move ($area1, $x, 0);
+    return 1; # keep running
+  }
+}
+{
+  my $timer_id;
+  my $idx = 0;
+  my @backgrounds = ('red', 'black', 'green', 'blue', 'grey');
+  my $button = Gtk2::CheckButton->new_with_label ('Background Changing');
+  $button->set_tooltip_markup
+    ("Check this to update the background in the widget, to see the lasso gc follow it");
+  $vbox1->pack_start ($button, 0,0,0);
+  $button->signal_connect ('toggled' => sub {
+                             if ($button->get_active) {
+                               $timer_id ||= do {
+                                 print "$progname: background changing start\n";
+                                 Glib::Timeout->add (2000, \&background_timer);
+                               };
+                             } else {
+                               if ($timer_id) {
+                                 print "$progname: background changing stop\n";
+                                 Glib::Source->remove ($timer_id);
+                                 $timer_id = undef;
+                               }
+                             }
+                           });
+  sub background_timer {
+    $idx++;
+    if ($idx >= @backgrounds) {
+      $idx = 0;
+    }
+    my $color = Gtk2::Gdk::Color->parse ($backgrounds[$idx]);
+    $area1->modify_bg ('normal', $color);
+    $color = Gtk2::Gdk::Color->parse ($backgrounds[-$idx]);
+    $area2->modify_bg ('normal', $color);
     return 1; # keep running
   }
 }

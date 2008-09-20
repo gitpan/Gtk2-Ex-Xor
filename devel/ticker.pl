@@ -32,6 +32,9 @@ use Gtk2::Ex::CrossHair;
 use Gtk2::Ex::TickerView;
 use Data::Dumper;
 
+use File::Basename;
+my $progname = basename($0);
+
 # Gtk2::Gdk::Window->set_debug_updates (1);
 
 my $toplevel = Gtk2::Window->new('toplevel');
@@ -64,7 +67,7 @@ $ticker->signal_connect (button_press_event =>
                         sub {
                           my ($widget, $event) = @_;
                           if ($event->button == 3) {
-                            print __FILE__.": start button $widget\n";
+                            print "$progname: start button $widget\n";
                             $cross->start ($event);
                           }
                           return 0; # propagate
@@ -74,12 +77,12 @@ $ticker->signal_connect
    sub {
      my ($widget, $event) = @_;
      if ($event->keyval == Gtk2::Gdk->keyval_from_name('c')) {
-       print __FILE__.": start key $widget\n";
+       print "$progname: start key $widget\n";
        $cross->start ($event);
        return 1; # don't propagate
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('e')) {
        my ($width, $height) = $ticker->window->get_size;
-       print __FILE__.": queue draw top left quarter\n";
+       print "$progname: queue draw top left quarter\n";
        $ticker->queue_draw_area (0,0, $width/2, $height/2);
        return 1; # don't propagate
      } else {

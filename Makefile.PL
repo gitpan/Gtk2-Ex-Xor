@@ -36,6 +36,14 @@ WriteMakefile
                     # my Glib-Ex-ObjectBits
                     'Glib::Ex::SignalIds' => 0,
 
+                    # my Gtk2-Ex-WidgetBits
+                    'Gtk2::Ex::WidgetBits' => 0,
+                    'Gtk2::Ex::KeySnooper' => 0,
+
+                    # optional for Lasso but mandatory for CrossHair
+                    # version 5 for weakening fixes
+                    'Gtk2::Ex::WidgetCursor' => 5,
+
                     # actually Gtk2-Perl requires perl 5.8, which has
                     # List::Util and Scalar::Util builtin already
                     'List::Util' => 0,

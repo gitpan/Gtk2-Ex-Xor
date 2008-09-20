@@ -21,12 +21,11 @@ use warnings;
 use Carp;
 use List::Util;
 use POSIX ();
-use Scalar::Util;
 
 use Gtk2;
 use Gtk2::Ex::Xor;
 
-our $VERSION = 2;
+our $VERSION = 3;
 
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
@@ -98,8 +97,17 @@ sub _cleanup_widgets {
   my ($self) = @_;
   foreach my $widget (@{$self->{'widgets'}}) {
     if (my $gc = delete $widget->{__PACKAGE__,$self,'gc'}) {
+      # pending this done automatically in Gtk2-Perl 1.190
       Gtk2::GC->release ($gc);
     }
+  }
+}
+sub _do_style_set {
+  my ($widget, $prev_style, $ref_weak_self) = @_;
+  my $self = $$ref_weak_self || return;
+  if (my $gc = delete $widget->{__PACKAGE__,$self,'gc'}) {
+    # pending this done automatically in Gtk2-Perl 1.190
+    Gtk2::GC->release ($gc);
   }
 }
 
@@ -144,7 +152,15 @@ sub SET_PROPERTY {
     # there's no need for us to redraw over its changes.
     #
     my @static_setups;
+    $self->{'static_setups'} = \@static_setups;
+    my $ref_weak_self = Gtk2::Ex::Xor::_ref_weak ($self);
+    require Glib::Ex::SignalIds;
+
     foreach my $widget (@$widgets) {
+      push @static_setups, Glib::Ex::SignalIds->new
+        ($widget,
+         $widget->signal_connect (style_set => \&_do_style_set,
+                                  $ref_weak_self));
 
       #       require Gtk2::Ex::WidgetEvents;
       #       push @static_setups, Gtk2::Ex::WidgetEvents->new
@@ -157,7 +173,6 @@ sub SET_PROPERTY {
                            'enter-notify-mask',
                            'leave-notify-mask']);
     }
-    $self->{'static_setups'} = \@static_setups;
 
   } elsif ($pname eq 'active') {
     # the extra '$self->notify' calls by running 'start' and 'end' here are
@@ -170,7 +185,7 @@ sub SET_PROPERTY {
 
   } elsif ($pname eq 'foreground' || $pname eq 'line_width') {
     if ($self->{'drawn'}) { _draw ($self); } # undraw
-    _cleanup_widgets ($self);
+    _cleanup_widgets ($self);  # new colour
     $self->{$pname} = $newval;
     if ($self->{'active'}) { _draw ($self); }
   }
@@ -203,10 +218,7 @@ sub _start {
 
   my @dynamic_setups;
   $self->{'dynamic_setups'} = \@dynamic_setups;
-
-  my $weak_self = $self;
-  Scalar::Util::weaken ($weak_self);
-  my $ref_weak_self = \$weak_self;
+  my $ref_weak_self = Gtk2::Ex::Xor::_ref_weak ($self);
 
   require Glib::Ex::SignalIds;
   foreach my $widget (@$widget_list) {
@@ -565,6 +577,9 @@ obscure the lines.  This is done with the WidgetCursor mechanism (see
 L<Gtk2::Ex::WidgetCursor>) and so cooperates with widget or application uses
 of that.
 
+The crosshair is drawn using xors in the widget window.  See
+L<Gtk2::Ex::Xor> for notes on this.
+
 =head1 FUNCTIONS
 
 =over 4
@@ -658,12 +673,6 @@ reporting about its original window.
 
 =back
 
-=head1 OTHER NOTES
-
-The crosshair is drawn with an XOR between the requested foreground and a
-background established by C<Gtk2::Ex::Xor>.  This is fast and portable but
-only really suitable for a widget with a single dominant background pixel.
-
 =head1 BUGS
 
 C<no-window> widgets don't work properly, but instead should be put in a
@@ -671,8 +680,8 @@ C<Gtk2::EventBox> and that passed to the crosshair.
 
 =head1 SEE ALSO
 
-L<Gtk2::Ex::Lasso>, L<Glib::Object>, L<Gtk2::Ex::WidgetCursor>,
-
+L<Gtk2::Ex::Lasso>, L<Gtk2::Ex::Xor>, L<Glib::Object>,
+L<Gtk2::Ex::WidgetCursor>
 
 =head1 HOME PAGE
 

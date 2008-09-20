@@ -16,6 +16,12 @@ You should have received a copy of the GNU General Public License
 along with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
+
+Version 3,  September 2008
+    - Goo::Canvas background is style "base", not "bg",
+      reported by zentara
+    - notice style background colour changes
+
 Version 2,  September 2008
     - cope with resize of widgets while xoring active
     - draw into subwindows for Gnome2::Canvas and Goo::Canvas,

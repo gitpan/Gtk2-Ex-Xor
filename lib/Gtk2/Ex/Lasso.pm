@@ -25,9 +25,9 @@ use Scalar::Util;
 use Gtk2;
 use Gtk2::Ex::Xor;
 
-our $VERSION = 2;
+our $VERSION = 3;
 
-# set this to 1 for some diagnostic prints
+# set this to 1 or 2 for some diagnostic prints
 use constant DEBUG => 0;
 
 
@@ -102,27 +102,37 @@ sub SET_PROPERTY {
 
   if ($pname eq 'foreground') {
     if ($self->{'drawn'}) { _draw ($self); }
-    if (my $gc = delete $self->{'gc'}) { Gtk2::GC->release ($gc); }
-    $self->{$pname} = $newval;
+    _change_gc ($self);
+    $self->{$pname} = $newval;  # per default GET_PROPERTY
     if ($self->{'active'}) { _draw ($self); }
     return;
   }
 
-  $self->{$pname} = $newval;  # per default GET_PROPERTY
-
   if ($pname eq 'widget') {
+    my $active = $self->{'active'};
+    my $button = $self->{'button'};
+    _end ($self);
+    $self->{$pname} = $newval;  # per default GET_PROPERTY
     my $widget = $newval;
+
     Scalar::Util::weaken ($self->{$pname});
     $widget->add_events (['button-motion-mask',
                           'button-release-mask']);
+    _change_gc ($self);
+    delete $self->{'style_sig'};
+    if ($active) {
+      $self->start;
+      # keep button number to let _do_button_release match it
+      $self->{'button'} = $button;
+    }
 
     # require Gtk2::Ex::WidgetEvents;
     # $self->{'wevents'} = Gtk2::Ex::WidgetEvents->new ($widget,
     #                                                   ['button-motion-mask',
-    #                                                    'button-release-mask',
-    #
+    return;
+  }
 
-  } elsif ($pname eq 'active') {
+  if ($pname eq 'active') {
     if ($newval && ! $oldval) {
       $self->start;
     } elsif ($oldval && ! $newval) {
@@ -134,22 +144,43 @@ sub SET_PROPERTY {
   }
 }
 
+sub _change_gc {
+  my ($self) = @_;
+  if (my $gc = delete $self->{'gc'}) {
+    # pending this done automatically in Gtk2-Perl 1.190
+    Gtk2::GC->release ($gc);
+  }
+}
+sub _do_style_set {
+  my ($widget, $prev_style, $ref_weak_self) = @_;
+  my $self = $$ref_weak_self || return;
+  _change_gc ($self);
+}
+
 sub start {
   my ($self, $event) = @_;
-  my $widget = $self->{'widget'} or croak 'Lasso has no widget';
+  my $widget = $self->{'widget'} || croak 'Lasso has no widget';
   if (DEBUG) { print "Lasso start\n"; }
 
   my $window = $widget->Gtk2_Ex_Xor_window
-    or croak 'Lasso->start(): unrealized widget not (yet) supported';
+    || croak 'Lasso->start(): unrealized widget not (yet) supported';
 
+  my $want_grab = 1;
+  $self->{'button'} = 0;
   if (Scalar::Util::blessed($event) && $event->can('button')) {
+    if (DEBUG) { print "  button ",$event->button,"\n"; }
     $self->{'button'} = $event->button;
 
-  } elsif (! $self->{'grabbed'}) {
+    # Passive grab from the button is enough, so normally $want_grab false
+    # here.  But if the button press was in some other widget then the grab
+    # there is no good, must have $want_grab true in that case.
+    $want_grab = (Gtk2->get_event_widget($event) != $widget);
+  }
+  if ($want_grab && ! $self->{'grabbed'}) {
     my $status = Gtk2::Gdk->pointer_grab
       ($window,
-       1,      # owner events
-       ['pointer-motion-mask'],
+       0,      # owner events
+       ['pointer-motion-mask', 'button-release-mask'],
        undef,  # no confine window
        undef,  # cursor
        _event_time($event));
@@ -159,7 +190,6 @@ sub start {
     } else {
       carp "Lasso->start(): cannot grab pointer: $status";
     }
-    $self->{'button'} = 0;
   }
 
   if ($self->{'active'}) {
@@ -170,11 +200,12 @@ sub start {
   $self->{'active'} = 1;
   _update_widgetcursor ($self);
 
-  my $weak_self = $self;
-  Scalar::Util::weaken ($weak_self);
-  my $ref_weak_self = \$weak_self;
+  my @dynamic;
+  $self->{'dynamic_setups'} = \@dynamic;
+  my $ref_weak_self = Gtk2::Ex::Xor::_ref_weak ($self);
+
   require Glib::Ex::SignalIds;
-  $self->{'signal_ids'} = Glib::Ex::SignalIds->new
+  push @dynamic, Glib::Ex::SignalIds->new
     ($widget,
      $widget->signal_connect (motion_notify_event => \&_do_motion_notify,
                               $ref_weak_self),
@@ -187,8 +218,13 @@ sub start {
      $widget->signal_connect_after (size_allocate => \&_do_size_allocate,
                                     $ref_weak_self));
 
-  $self->{'snooper_id'} = Gtk2->key_snooper_install
+  require Gtk2::Ex::KeySnooper;
+  push @dynamic, Gtk2::Ex::KeySnooper->new
     (\&_do_key_snooper, $ref_weak_self);
+
+  $self->{'style_sig'} = Glib::Ex::SignalIds->new
+    ($widget,
+     $widget->signal_connect (style_set => \&_do_style_set, $ref_weak_self));
 
   my ($x, $y) = (Scalar::Util::blessed($event) && $event->can('x')
                  ? Gtk2::Ex::Xor::_event_widget_coords ($widget, $event)
@@ -233,21 +269,16 @@ sub abort {
 sub _end {
   my ($self, $event) = @_;
   $self->{'active'} = 0;
-  $self->{'signal_ids'} = undef;
+  delete $self->{'dynamic_setups'};
+  _update_widgetcursor ($self);
 
-  my $widget = $self->{'widget'};
   if ($self->{'drawn'}) {
     if (DEBUG) { print "  undraw\n"; }
     _draw ($self);
     $self->{'drawn'} = 0;
   }
-
-  _update_widgetcursor ($self);
-
-  if (my $id = delete $self->{'snooper_id'}) {
-    Gtk2->key_snooper_remove ($id);
-  }
   if (delete $self->{'grabbed'}) {
+    if (DEBUG) { print "  ungrab\n"; }
     Gtk2::Gdk->pointer_ungrab (_event_time ($event));
   }
 }
@@ -273,7 +304,7 @@ sub _update_widgetcursor {
 
 sub _do_expose {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self or return;
+  my $self = $$ref_weak_self || return;
   if (DEBUG) { print "lasso expose $widget, active=",
                  $self->{'active'}||0,"\n"; }
   if ($self->{'drawn'}) {
@@ -285,7 +316,7 @@ sub _do_expose {
 # button or motion event
 sub _do_motion_notify {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self or return;
+  my $self = $$ref_weak_self || return;
 
   # Do a get_pointer() to support 'pointer-motion-hint-mask'.
   # Maybe should use $display->get_state here instead of just get_pointer,
@@ -314,7 +345,7 @@ sub _do_motion_notify {
 #
 sub _do_size_allocate {
   my ($widget, $alloc, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self or return;
+  my $self = $$ref_weak_self || return;
   # re-run allocation constraints
   _maybe_move ($self,
                $self->{'x1'}, $self->{'y1'},
@@ -324,7 +355,9 @@ sub _do_size_allocate {
 
 sub _do_button_release {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self or return;
+  my $self = $$ref_weak_self || return;
+  if (DEBUG) { print "Lasso button release, got ", $event->button,
+                 " want ", $self->{'button'}, "\n"; }
   if ($event->button == $self->{'button'}) {
     $self->end ($event);
   }
@@ -346,7 +379,7 @@ sub _maybe_move {
   }
 
   if ($self->{'drawn'}) {
-    if (DEBUG) { print "  undraw\n"; }
+    if (DEBUG >= 2) { print "  undraw\n"; }
     _draw ($self);
   }
   $self->{'x1'} = $x1;
@@ -363,7 +396,7 @@ sub _undraw {
 
 sub _draw {
   my ($self, $clip_region) = @_;
-  if (DEBUG) { print "   _draw  ",$clip_region||'noclip',"\n"; }
+  if (DEBUG >= 2) { print "   _draw  ",$clip_region||'noclip',"\n"; }
   my $widget = $self->{'widget'};
 
   my $win = $widget->Gtk2_Ex_Xor_window
@@ -394,17 +427,19 @@ sub swap_corners {
   _maybe_move ($self,
                $self->{'x2'}, $self->{'y2'},
                $self->{'x1'}, $self->{'y1'});
-  _widget_warp_pointer ($self->{'widget'}, $x1, $y1);
+  
+  require Gtk2::Ex::WidgetBits;
+  Gtk2::Ex::WidgetBits::warp_pointer ($self->{'widget'}, $x1, $y1);
 }
 
 
-# key snooper callback
+# KeySnooper callback
 sub _do_key_snooper {
   my ($target_widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self or return 1; # propagate event
+  my $self = $$ref_weak_self || return 0; # propagate event
 
   # ignore key releases
-  $event->type eq 'key-press' or return 0; # propagate event
+  $event->type eq 'key-press' || return 0; # propagate event
 
   if (DEBUG) { print "Lasso key ", $event->keyval, "\n"; }
 
@@ -426,7 +461,7 @@ sub _do_key_snooper {
 
 sub _do_grab_broken {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self or return;
+  my $self = $$ref_weak_self || return;
   if (DEBUG) { print "Lasso grab broken\n"; }
 
   $self->{'grabbed'} = 0;
@@ -449,7 +484,7 @@ sub _do_grab_broken {
 #------------------------------------------------------------------------------
 # generic helpers
 
-# Draw an outlined rectangle with corners at $x1,$y1 and $x2,$y2.
+# Draw a rectangle with corners at $x1,$y1 and $x2,$y2.
 sub _draw_rectangle_corners {
   my ($drawable, $gc, $filled, $x1,$y1, $x2,$y2) = @_;
   if (DEBUG >= 2) { print "  draw rect $x1,$y1 - $x2,$y2\n"; }
@@ -475,46 +510,8 @@ sub _window_constrain_coords {
           max (0, min ($height-1, $y)));
 }
 
-# Warp the mouse pointer to ($x,$y) in $widget coordinates.
-#
-sub _widget_warp_pointer {
-  my ($widget, $x, $y) = @_;
-  my $window = $widget->window
-    or croak "Cannot warp mouse pointer on unrealized $widget";
-
-  if ($widget->flags & 'no-window') {
-    my $alloc = $widget->allocation;
-    $x += $alloc->x;
-    $y += $alloc->y;
-  }
-  my ($wx, $wy) = _window_get_root_position ($window);
-  $window->get_display->warp_pointer ($window->get_screen, $x+$wx, $y+$wy);
-}
-
-# Return two values ($x,$y) which is the position of $window in root window
-# coordinates.  This uses gdk_window_get_position() and so takes the most
-# recent configure notify positions, as opposed to $window->get_origin which
-# gets the latest with an X server round-trip (XTranslateCoordinates()).
-#
-# The loop here is similar to what gtk_widget_translate_coordinates() does
-# chasing up through window ancestors.
-#
-sub _window_get_root_position {
-  my ($window) = @_;
-  my $x = 0;
-  my $y = 0;
-  while ($window->get_window_type ne 'root') {
-    my ($parent_x, $parent_y) = $window->get_position;
-    $x += $parent_x;
-    $y += $parent_y;
-    $window = $window->get_parent
-      or croak '_window_get_root_position(): oops, didn\'t reach root window';
-  }
-  return ($x, $y);
-}
-
 # Return a server timestamp from $event, if it's not undef and if it's an
-# event which has a timestamp.
+# event type which has a timestamp.
 sub _event_time {
   my ($event) = @_;
   if (Scalar::Util::blessed($event) && $event->can('time')) {
@@ -575,9 +572,9 @@ The following keys are recognised while lassoing,
     Esc         abort the selection
     Space       swap the mouse pointer to the opposite corner
 
-Other keys are propagated to normal processing.  The space to "swap" is
-designed to let you move the opposite corner if you didn't start at the
-right spot, or change your mind.
+Other keys are propagated to normal processing.  The space to "swap" lets
+you move the opposite corner if you didn't start at the right spot, or
+change your mind.
 
 =head1 FUNCTIONS
 
@@ -610,8 +607,8 @@ release.
 If you end a lasso in response to a button release, another button press, a
 motion notify, or similar, then pass the C<Gtk2::Gdk::Event> as the optional
 C<$event> parameter.  C<end> will use it for a final X,Y position, and for a
-server timestamp if ungrabbing.  This can be important if event processing
-is a bit lagged.
+server timestamp if ungrabbing.  This is important if event processing is a
+bit lagged.
 
 =item C<< $lasso->abort () >>
 
@@ -631,7 +628,8 @@ of the pointer (ie. a forcible movement).  This is the user Space key.
 
 =item C<widget> (a C<Gtk2::Widget>, or C<undef>)
 
-The target widget to act on.
+The target widget to act on.  This can be changed even when the lasso is
+active, though doing so stands a good chance of confusing the user.
 
 =item C<active> (boolean, default false)
 
@@ -640,9 +638,9 @@ same as calling C<start> or C<end> above (except you can't pass events).
 
 =item C<foreground> (scalar, default C<undef>)
 
-The foreground colour to draw the lasso.  This can be a string name (or
-hexadecimal RGB), a C<Gtk2::Gdk::Color> object with an allocated pixel
-value, or C<undef> for the widget's C<Gtk2::Style> foreground.
+The foreground colour to draw the lasso.  This can be a string name
+(including hex "#RRGGBB"), a C<Gtk2::Gdk::Color> object with an allocated
+pixel value, or C<undef> for the widget's C<Gtk2::Style> foreground.
 
 =item C<cursor> (scalar, default C<"hand1">)
 
@@ -650,9 +648,15 @@ The mouse cursor type to display while lassoing.  This can be any string or
 object understood by C<Gtk2::Ex::WidgetCursor>, or C<undef> for no cursor
 change.
 
-A cursor change is highly desirable because when starting a lasso it's
+A different cursor is highly desirable because when starting a lasso it's
 normally too small for the user to see and so really needs another visual
-indication that selection has begun.
+indication that selection has begun.  The default C<"hand1"> is meant to be
+reasonable.
+
+The cursor can be changed while the lasso is active.  Doing so is probably
+unusual, but it works, and might be used for something creative like further
+visual feedback or keeping an arrow outwards so as not to obscure the
+selected region.
 
 =back
 
@@ -680,34 +684,24 @@ basically wanting no action on the region.
 
 =head1 OTHER NOTES
 
-The lasso is drawn with an XOR between the requested foreground and a
-background established by C<Gtk2::Ex::Xor>.  This is fast and portable but
-only really suitable for a widget with a single dominant background pixel.
-
-Expose events during lasso selection work, though they assume the target
-widget's expose redraws only the expose event region given, as opposed to
-doing a full window redraw.  Clipping the redraw is usual, and indeed
-desirable.
+The lasso is drawn using xors in the widget window.  See L<Gtk2::Ex::Xor>
+for notes on this.
 
 Keypresses are obtained from the Gtk "snooper" mechanism, so they work even
-if the lasso target widget doesn't have the focus, including when it's a
-no-focus widget.  Keys not for the lasso are propagated in the usual way.
+if the lasso target widget doesn't have the focus.  Keys not for the lasso
+are propagated in the usual way.
 
 When the lasso is started from a keypress etc, not a button drag, an
-explicit pointer grab is used so motion outside the widget window can be
+explicit pointer grab is used so motion events outside the widget window are
 seen.  In the current code a further C<start> call with a button press event
 will switch to drag mode, so the corresponding release has the expected
 effect.  But maybe that's a bit obscure, so perhaps in the future the way
 this works will change.
 
-=head1 BUGS
-
-Changing the C<widget> property works, but doing so while the lasso is
-active is unlikely to be good for the user.
-
 =head1 SEE ALSO
 
-L<Gtk2::Ex::CrossHair>, L<Glib::Object>, L<Gtk2::Ex::WidgetCursor>,
+L<Gtk2::Ex::CrossHair>, L<Gtk2::Ex::Xor>, L<Glib::Object>,
+L<Gtk2::Ex::WidgetCursor>
 
 =head1 HOME PAGE
 

@@ -24,7 +24,7 @@ use Gtk2;
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
 
-our $VERSION = 2;
+our $VERSION = 3;
 
 
 sub get_gc {
@@ -81,6 +81,13 @@ sub _event_widget_coords {
   return ($x, $y);
 }
 
+sub _ref_weak {
+  my ($weak_self) = @_;
+  require Scalar::Util;
+  Scalar::Util::weaken ($weak_self);
+  return \$weak_self;
+}
+
 
 #------------------------------------------------------------------------------
 # background colour hacks
@@ -106,11 +113,16 @@ sub Gtk2::Widget::Gtk2_Ex_Xor_background_from_style {
 # Gtk2::TextView.  TextView has multiple windows, so this is the colour
 # meant for the main text window.
 #
+# GooCanvas uses the "base" colour too.  Dunno if it thinks of itself as
+# text oriented or if white in the default style colours seemed better.
+#
 sub Gtk2::Entry::Gtk2_Ex_Xor_background_from_style {
   my ($widget) = @_;
   return $widget->get_style->base ($widget->state);
 }
 *Gtk2::TextView::Gtk2_Ex_Xor_background_from_style
+  = \&Gtk2::Entry::Gtk2_Ex_Xor_background_from_style;
+*Goo::Canvas::Gtk2_Ex_Xor_background_from_style
   = \&Gtk2::Entry::Gtk2_Ex_Xor_background_from_style;
 
 # For Gtk2::Bin subclasses such as Gtk2::EventBox, look at the child's
@@ -168,7 +180,7 @@ sub Gtk2::Entry::Gtk2_Ex_Xor_window {
   my ($widget) = @_;
   my $win = $widget->window || return undef; # if unrealized
   return ($win->get_children)[0] # first child
-    || $widget->SUPER::Gtk2_Ex_Xor_window;
+    || $win;
 }
 
 # GooCanvas draws on a subwindow too, also undocumented it seems
@@ -179,13 +191,82 @@ sub Gtk2::Entry::Gtk2_Ex_Xor_window {
 1;
 __END__
 
-# Not sure about this yet
+=head1 NAME
+
+Gtk2::Ex::Xor -- shared support for drawing with XOR
+
+=head1 DESCRIPTION
+
+This is support code shared by C<Gtk2::Ex::CrossHair> and
+C<Gtk2::Ex::Lasso>.
+
+Both those add-ons draw using an "xor" onto pixels in a widget (hence the
+dist name), using an xor value that flips between the widget background and
+the cross or lasso line colour.  Drawing like that is fast and portable,
+though doing it as an add-on can potentially clash with what the widget does
+natively.
+
+=over 4
+
+=item *
+
+A single dominant background colour is assumed.  Often shades of grey or
+similar will end up with a contrasting line but though there's no guarantee
+of that.
+
+=item *
+
+The background colour is taken from the widget C<Gtk2::Style> "bg" for
+normal widgets, or from "base" for text oriented widgets like C<Gtk2::Entry>
+and C<Gtk2::TextView>.  C<Goo::Canvas> is recognised as using "base" too.
+
+=item *
+
+Expose events are watched and xoring redone, though it assumes the widget
+will redraw only the exposed region, as opposed to a full window redraw.
+Clipping in a redraw is usually what you want, especially if the display
+might not have the X double-buffering extension.
+
+=item *
+
+For multi-window widgets it's necessary to figure out which subwindow is the
+one to draw on.  The xoring recognises the "bin" window of C<Gtk2::Layout>
+(and its subclasses like C<Gnome2::Canvas>), the "text" subwindow of
+C<Gtk2::TextView>, and the secret subwindows of C<Gtk2::Entry> and
+C<Goo::Canvas>.
+
+=back
+
+=head1 SEE ALSO
+
+L<Gtk2::Ex::CrossHair>, L<Gtk2::Ex::Lasso>
+
+=head1 HOME PAGE
+
+L<http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html>
+
+=head1 LICENSE
+
+Copyright 2007, 2008 Kevin Ryde
+
+Gtk2-Ex-Xor is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation; either version 3, or (at your option) any later
+version.
+
+Gtk2-Ex-Xor is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+more details.
+
+You should have received a copy of the GNU General Public License along with
+Gtk2-Ex-Xor.  If not, see L<http://www.gnu.org/licenses/>.
+
+=cut
+
 #
+# Not sure about describing this yet:
 #
-# =head1 NAME
-# 
-# Gtk2::Ex::Xor -- shared support for widget add-ons drawing with XOR
-# 
 # =head1 SYNOPSIS
 # 
 #  use Gtk2::Ex::Xor;

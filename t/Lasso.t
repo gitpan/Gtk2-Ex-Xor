@@ -23,8 +23,8 @@ use warnings;
 use Gtk2::Ex::Lasso;
 use Test::More tests => 8;
 
-ok ($Gtk2::Ex::Lasso::VERSION >= 1);
-ok (Gtk2::Ex::Lasso->VERSION >= 1);
+ok ($Gtk2::Ex::Lasso::VERSION >= 3);
+ok (Gtk2::Ex::Lasso->VERSION  >= 3);
 
 sub main_iterations {
   my $count = 0;

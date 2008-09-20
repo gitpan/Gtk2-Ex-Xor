@@ -23,8 +23,8 @@ use warnings;
 use Gtk2::Ex::CrossHair;
 use Test::More tests => 10;
 
-ok ($Gtk2::Ex::CrossHair::VERSION >= 1);
-ok (Gtk2::Ex::CrossHair->VERSION >= 1);
+ok ($Gtk2::Ex::CrossHair::VERSION >= 3);
+ok (Gtk2::Ex::CrossHair->VERSION  >= 3);
 
 # return an arrayref
 sub leftover_fields {

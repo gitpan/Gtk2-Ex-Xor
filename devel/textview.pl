@@ -24,6 +24,9 @@ use Gtk2 '-init';
 use Gtk2::Ex::CrossHair;
 use Data::Dumper;
 
+use File::Basename;
+my $progname = basename($0);
+
 # Gtk2::Gdk::Window->set_debug_updates (1);
 
 my $toplevel = Gtk2::Window->new('toplevel');
@@ -55,7 +58,7 @@ $area1->add_events (['button-press-mask','key-press-mask']);
 $area1->signal_connect (button_press_event =>
                         sub {
                           my ($widget, $event) = @_;
-                          print "t-cross: start button $widget\n";
+                          print "$progname: start button $widget\n";
                           require Gtk2::Ex::Xor;
                           {
                             my $bg = $area1->Gtk2_Ex_Xor_background;
@@ -85,13 +88,13 @@ $area1->signal_connect
    sub {
      my ($widget, $event) = @_;
      if ($event->keyval == Gtk2::Gdk->keyval_from_name('c')) {
-       print "t-cross: start key $widget\n";
+       print "$progname: start key $widget\n";
        $cross->start ($event);
        return 1; # don't propagate
 
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('e')) {
        my ($width, $height) = $area1->window->get_size;
-       print "t-cross: queue draw top left quarter\n";
+       print "$progname: queue draw top left quarter\n";
        $area1->queue_draw_area (0,0, $width/2, $height/2);
        return 1; # don't propagate
 

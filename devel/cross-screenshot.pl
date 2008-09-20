@@ -27,7 +27,7 @@ use strict;
 use warnings;
 use Gtk2 '-init';
 use Gtk2::Ex::CrossHair;
-use Gtk2::Ex::Lasso;
+use Gtk2::Ex::WidgetBits;
 
 use File::Basename;
 my $progname = basename($0);
@@ -47,7 +47,7 @@ my $cross = Gtk2::Ex::CrossHair->new (widget => $toplevel,
 
 $toplevel->signal_connect
   (map_event => sub {
-     Gtk2::Ex::Lasso::_widget_warp_pointer ($toplevel, 125, 40);
+     Gtk2::Ex::WidgetBits::warp_pointer ($toplevel, 125, 40);
      $cross->start ();
 
      my $window = $toplevel->window;

@@ -23,6 +23,9 @@ use Gtk2 '-init';
 use Gtk2::Ex::Lasso;
 use Data::Dumper;
 
+use File::Basename;
+my $progname = basename($0);
+
 my $toplevel = Gtk2::Window->new('toplevel');
 $toplevel->set_default_size (500, 300);
 $toplevel->signal_connect (destroy => sub { Gtk2->main_quit; });
@@ -42,15 +45,15 @@ $entry->signal_connect
    sub {
      my ($entry, $event, $userdata) = @_;
      if ($event->keyval == Gtk2::Gdk->keyval_from_name('s')) {
-       print __FILE__.": start key\n";
+       print "$progname: start key\n";
        $lasso->start ($event);
        return 1; # don't propagate
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('e')) {
-       print __FILE__.": end\n";
+       print "$progname: end\n";
        $lasso->end;
        return 1; # don't propagate
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('r')) {
-       print __FILE__.": redraw\n";
+       print "$progname: redraw\n";
        $entry->queue_draw;
        return 1; # don't propagate
      }
@@ -60,21 +63,21 @@ $entry->add_events(['button-press-mask']);
 $entry->signal_connect (button_press_event =>
                        sub {
                          my ($entry, $event, $userdata) = @_;
-                         print __FILE__.": start button\n";
+                         print "$progname: start button\n";
                          $lasso->start ($event);
                        });
 
 $lasso->signal_connect (moved =>
                         sub {
-                          print __FILE__.": moved ", join(' ',@_), "\n";
+                          print "$progname: moved ", join(' ',@_), "\n";
                         });
 $lasso->signal_connect (aborted =>
                         sub {
-                          print __FILE__.": aborted ", join(' ',@_), "\n";
+                          print "$progname: aborted ", join(' ',@_), "\n";
                         });
 $lasso->signal_connect (ended =>
                         sub {
-                          print __FILE__.": ended ", join(' ',@_), "\n";
+                          print "$progname: ended ", join(' ',@_), "\n";
                         });
 
 {

@@ -21,7 +21,10 @@
 use strict;
 use warnings;
 use Gtk2::Ex::Xor;
-use Test::More tests => 3;
+use Test::More tests => 5;
+
+ok ($Gtk2::Ex::Xor::VERSION >= 3);
+ok (Gtk2::Ex::Xor->VERSION  >= 3);
 
 SKIP: {
   require Gtk2;

@@ -32,6 +32,7 @@ use Math::Trig qw(:pi
                   cylindrical_to_cartesian);
 
 use Gtk2::Ex::Lasso;
+use Gtk2::Ex::WidgetBits;
 
 use constant { WIDTH => 200,
                HEIGHT => 100,
@@ -108,10 +109,10 @@ $area->signal_connect
 my $id;
 $area->signal_connect
   (expose_event => sub {
-     Gtk2::Ex::Lasso::_widget_warp_pointer ($area, LX, LY);
+     Gtk2::Ex::WidgetBits::warp_pointer ($area, LX, LY);
      $lasso->start ();
      $id = $lasso->signal_connect (moved => \&save);
-     Gtk2::Ex::Lasso::_widget_warp_pointer ($area, RX, RY);
+     Gtk2::Ex::WidgetBits::warp_pointer ($area, RX, RY);
      return 0; # propagate event
    });
 
