@@ -20,13 +20,13 @@
 
 use strict;
 use warnings;
+use FindBin;
 use Gtk2 '-init';
 use Gtk2::Ex::CrossHair;
 use Gtk2::Ex::Dragger;
 use Data::Dumper;
 
-use File::Basename;
-my $progname = basename($0);
+my $progname = $FindBin::Script;
 
 my $toplevel = Gtk2::Window->new('toplevel');
 $toplevel->signal_connect (destroy => sub { Gtk2->main_quit });

@@ -25,6 +25,7 @@
 
 use strict;
 use warnings;
+use FindBin;
 use Gtk2 '-init';
 use POSIX;
 use Math::Trig qw(:pi
@@ -42,8 +43,7 @@ use constant { WIDTH => 200,
                RY => 70,
              };
 
-use File::Basename;
-my $progname = basename($0);
+my $progname = $FindBin::Script;
 
 my $output_filename = (@ARGV >= 1 ? $ARGV[0]
                        : '/tmp/lasso-screenshot.png');
@@ -87,7 +87,7 @@ for (my $i = 0; $i < @points; $i += 2) {
 sub rotate_135 {
   my ($x, $y) = @_;
   my ($rho, $theta, undef) = cartesian_to_cylindrical ($x, $y, 0);
-  $theta -= 0.75 * pi();
+  $theta -= 0.75 * Math::Trig::pi();
   ($x, $y, undef) = cylindrical_to_cartesian ($rho, $theta, 0);
   return (round($x), round($y));
 }

@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License along
 # with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
+use 5.008;
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
@@ -30,8 +31,9 @@ WriteMakefile
    SIGN         => 1,
 
    PREREQ_PM    => {
-                    # any version should be ok
-                    'Gtk2' => 0,
+                    # version 1.200 for Gtk2::GC auto-release, new
+                    # constants, and various bug fixes
+                    'Gtk2' => '1.200',
 
                     # my Glib-Ex-ObjectBits
                     'Glib::Ex::SignalIds' => 0,
@@ -39,6 +41,7 @@ WriteMakefile
                     # my Gtk2-Ex-WidgetBits
                     'Gtk2::Ex::WidgetBits' => 0,
                     'Gtk2::Ex::KeySnooper' => 0,
+                    'Gtk2::Ex::SyncCall' => 0,
 
                     # optional for Lasso but mandatory for CrossHair
                     # version 5 for weakening fixes
@@ -100,7 +103,7 @@ copyright-years-check:
 	  while read i; do \
 	    case $$i in \
 	      '' | */ \
-	      | debian/changelog | debian/compat | debian/control \
+	      | debian/changelog | debian/compat \
 	      | t/pod.t \
 	      | COPYING | MANIFEST | SIGNATURE | META.yml) \
 	      continue ;; \

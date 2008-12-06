@@ -17,6 +17,10 @@ along with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
+Version 4,  December 2008
+    - use SyncCall for smoothness
+    - fix an obscure expose propagation during lasso
+
 Version 3,  September 2008
     - Goo::Canvas background is style "base", not "bg",
       reported by zentara

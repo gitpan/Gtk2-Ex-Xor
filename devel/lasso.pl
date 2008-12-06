@@ -19,12 +19,12 @@
 
 use strict;
 use warnings;
-use Gtk2 '-init';
+use FindBin;
+use Gtk2 1.200 '-init';
 use Gtk2::Ex::Lasso;
 use Data::Dumper;
 
-use File::Basename;
-my $progname = basename($0);
+my $progname = $FindBin::Script;
 
 my $toplevel = Gtk2::Window->new('toplevel');
 $toplevel->signal_connect (destroy => sub { Gtk2->main_quit; });
@@ -64,7 +64,7 @@ $area->signal_connect (button_press_event =>
                          my ($area, $event, $userdata) = @_;
                          print "$progname: start button\n";
                          $lasso->start ($event);
-                         return 0; # propagate
+                         return Gtk2::EVENT_PROPAGATE;
                        });
 $area2->add_events(['button-press-mask']);
 $area2->signal_connect (button_press_event =>
@@ -72,20 +72,20 @@ $area2->signal_connect (button_press_event =>
                           my ($area2, $event, $userdata) = @_;
                           print "$progname: start button in area2\n";
                           $lasso->start ($event);
-                          return 0; # propagate
+                          return Gtk2::EVENT_PROPAGATE;
                         });
 
 $area->signal_connect (button_release_event =>
-                        sub {
-                          my ($area, $event, $userdata) = @_;
-                          print "$progname: area1 button release\n";
-                          return 0; # propagate
-                        });
+                       sub {
+                         my ($area, $event, $userdata) = @_;
+                         print "$progname: area1 button release\n";
+                         return Gtk2::EVENT_PROPAGATE;
+                       });
 $area2->signal_connect (button_release_event =>
                         sub {
                           my ($area2, $event, $userdata) = @_;
                           print "$progname: area2 button release\n";
-                          return 0; # propagate
+                          return Gtk2::EVENT_PROPAGATE;
                         });
 
 $lasso->signal_connect (moved =>
@@ -104,27 +104,27 @@ $lasso->signal_connect (ended =>
 Gtk2->key_snooper_install
   (sub {
      my ($widget, $event) = @_;
-     $event->type eq 'key-press' || return 0; # propagate
+     $event->type eq 'key-press' || return Gtk2::EVENT_PROPAGATE;
 
      if ($event->keyval == Gtk2::Gdk->keyval_from_name('s')) {
        print "$progname: start key\n";
        $lasso->start ($event);
-       return 1; # don't propagate
+       return Gtk2::EVENT_STOP;
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('e')) {
        print "$progname: end\n";
        $lasso->end;
-       return 1; # don't propagate
+       return Gtk2::EVENT_STOP;
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('r')) {
        print "$progname: redraw\n";
        $area->queue_draw;
-       return 1; # don't propagate
+       return Gtk2::EVENT_STOP;
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('2')) {
        print "$progname: toggle area2\n";
        $lasso->set ('widget',
                     ($lasso->get ('widget') == $area ? $area2 : $area));
-       return 1; # don't propagate
+       return Gtk2::EVENT_STOP;
      }
-     return 0; # propagate
+     return Gtk2::EVENT_PROPAGATE;
    });
 
 {
@@ -175,8 +175,8 @@ Gtk2->key_snooper_install
                              Glib::Timeout->add (2000, # milliseconds
                                                  sub {
                                                    $area->unmap;
-                                                   return 0; # stop
-                                               });
+                                                   return Glib::SOURCE_REMOVE;
+                                                 });
                            });
   $vbox->pack_start ($button, 0, 0, 0);
 }
@@ -188,8 +188,8 @@ Gtk2->key_snooper_install
                              Glib::Timeout->add (2000, # milliseconds
                                                  sub {
                                                    $toplevel->iconify;
-                                                   return 0; # stop
-                                               });
+                                                   return Glib::SOURCE_REMOVE;
+                                                 });
                            });
   $vbox->pack_start ($button, 0, 0, 0);
 }
@@ -240,7 +240,7 @@ Gtk2->key_snooper_install
     my $width = $widths[$idx];
     print "$progname: resize to $width,$area_height\n";
     $area->set_size_request ($width, $area_height);
-    return 1; # keep running
+    return Glib::SOURCE_CONTINUE;
   }
 }
 {
@@ -273,7 +273,7 @@ Gtk2->key_snooper_install
     my $x = $x[$idx];
     print "$progname: reposition to $x,0\n";
     $layout->move ($area, $x, 0);
-    return 1; # keep running
+    return Glib::SOURCE_CONTINUE;
   }
 }
 {
@@ -304,7 +304,36 @@ Gtk2->key_snooper_install
       $idx = 0;
     }
     $lasso->set(cursor => $cursors[$idx]);
-    return 1; # keep running
+    return Glib::SOURCE_CONTINUE;
+  }
+}
+{
+  my $timer_id;
+  my $idx = 0;
+  my @foregrounds = ('red', 'black', 'green', 'blue', 'grey');
+  my $button = Gtk2::CheckButton->new_with_label ('Foreground Changing');
+  $button->set_tooltip_markup
+    ("Check this to update the foreground colour in the lasso");
+  $vbox->pack_start ($button, 0,0,0);
+  $button->signal_connect ('toggled' => sub {
+                             if ($button->get_active) {
+                               $timer_id ||= do {
+                                 print "$progname: foreground changing start\n";
+                                 Glib::Timeout->add (2000, \&foreground_timer);
+                               };
+                             } else {
+                               if ($timer_id) {
+                                 print "$progname: foreground changing stop\n";
+                                 Glib::Source->remove ($timer_id);
+                                 $timer_id = undef;
+                               }
+                             }
+                           });
+  sub foreground_timer {
+    $idx++;
+    if ($idx >= @foregrounds) { $idx = 0; }
+    $lasso->set(foreground => $foregrounds[$idx]);
+    return Glib::SOURCE_CONTINUE;
   }
 }
 {
@@ -336,7 +365,7 @@ Gtk2->key_snooper_install
     }
     my $color = Gtk2::Gdk::Color->parse ($backgrounds[$idx]);
     $area->modify_bg ('normal', $color);
-    return 1; # keep running
+    return Glib::SOURCE_CONTINUE;
   }
 }
 

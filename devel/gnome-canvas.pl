@@ -20,14 +20,14 @@
 
 use strict;
 use warnings;
+use FindBin;
 use Gtk2 '-init';
 use Gnome2::Canvas;
 
 use Gtk2::Ex::CrossHair;
 use Gtk2::Ex::Lasso;
 
-use File::Basename;
-my $progname = basename($0);
+my $progname = $FindBin::Script;
 
 my $toplevel = Gtk2::Window->new('toplevel');
 $toplevel->set_default_size (500, 300);

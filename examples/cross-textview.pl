@@ -25,23 +25,23 @@
 #
 # The CrossHair here is activated with <Alt>-C and de-activated with
 # <Alt>-E.  It'd also be possible to look for say <Alt>-Button1 or similar
-# with the mouse, with the modifier to avoid clashing with the TextView's
-# normal button actions.
+# with the mouse, but you should use an Alt or Control modifier to avoid
+# clashing with the TextView's normal button actions.
 #
 # The widget X,Y position reported by the CrossHair "moved" callback is
 # turned into line/column with the usual TextView functions (in this case
-# just printed to stdout).  Some sort of conversion is almost always needed
-# so you can show a position in user terms, not just pixels.
+# just printed to stdout).  Some sort of conversion like that is almost
+# always needed so you can show a position in user terms not merely pixels.
 #
 
 use strict;
 use warnings;
+use FindBin;
 use Gtk2 '-init';
 use Gtk2::Ex::CrossHair;
 use Data::Dumper;
 
-use File::Basename;
-my $progname = basename($0);
+my $progname = $FindBin::Script;
 
 my $toplevel = Gtk2::Window->new('toplevel');
 $toplevel->set_default_size (300, 200);
@@ -52,10 +52,11 @@ $toplevel->add ($scrolled);
 
 my $textbuf = Gtk2::TextBuffer->new;
 $textbuf->set_text (<<'HERE');
-This is some
-sample text
-saying not very
-much at all really.
+This is some sample text
+saying not very much at all really.
+
+Press Alt-C to activate the cross,
+press Alt-E to deactivate it.
 HERE
 
 my $textview = Gtk2::TextView->new_with_buffer ($textbuf);
@@ -84,25 +85,15 @@ $textview->signal_connect
      if ($event->state >= ['mod1-mask']) {
        if ($event->keyval == Gtk2::Gdk->keyval_from_name('c')) {
          $cross->start ($event);
-         return 1; # stop event
+         return Gtk2::EVENT_STOP;
 
        } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('e')) {
          $cross->end;
-         return 1; # stop event
+         return Gtk2::EVENT_STOP;
        }
      }
-     return 0; # propagate event
+     return Gtk2::EVENT_PROPAGATE;
    });
-
-
-
-# $textview->add_events (['button-press-mask']);
-# $textview->signal_connect (button_press_event =>
-#                            sub {
-#                              my ($widget, $event) = @_;
-#                              $cross->start ($event);
-#                              return 0; # propagate event
-#                            });
 
 $toplevel->show_all;
 Gtk2->main;

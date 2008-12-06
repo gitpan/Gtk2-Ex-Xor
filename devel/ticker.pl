@@ -18,22 +18,20 @@
 # with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# As of Gtk2::Ex::TickerView version 4, a crosshair on top doesn't display
-# properly, because the ticker does XCopyArea to scroll thus shifting around
-# the bits crosshair has added.  (But some secret future plans for the
-# tickerview might have the happy side-effect of improving that ...)
+# TickerView and CrossHair can work together, since TickerView (post version
+# 5 or thereabouts) goes through queue_redraw for its updates, which reaches
+# the crosshair too.
 #
-
 
 use strict;
 use warnings;
+use FindBin;
 use Gtk2 '-init';
 use Gtk2::Ex::CrossHair;
 use Gtk2::Ex::TickerView;
 use Data::Dumper;
 
-use File::Basename;
-my $progname = basename($0);
+my $progname = $FindBin::Script;
 
 # Gtk2::Gdk::Window->set_debug_updates (1);
 

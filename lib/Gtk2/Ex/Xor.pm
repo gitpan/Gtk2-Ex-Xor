@@ -24,7 +24,7 @@ use Gtk2;
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
 
-our $VERSION = 3;
+our $VERSION = 4;
 
 
 sub get_gc {
@@ -69,6 +69,15 @@ sub get_gc {
 
 sub _event_widget_coords {
   my ($widget, $event) = @_;
+
+  # Do a get_pointer() to support 'pointer-motion-hint-mask'.
+  # Maybe should use $display->get_state here instead of just get_pointer,
+  # but crosshair and lasso at present only works with the mouse, not an
+  # arbitrary input device.
+  if ($event->can('is_hint') && $event->is_hint) {
+    return $widget->get_pointer;
+  }
+
   my $x = $event->x;
   my $y = $event->y;
   my $eventwin = $event->window;
@@ -200,9 +209,9 @@ Gtk2::Ex::Xor -- shared support for drawing with XOR
 This is support code shared by C<Gtk2::Ex::CrossHair> and
 C<Gtk2::Ex::Lasso>.
 
-Both those add-ons draw using an "xor" onto pixels in a widget (hence the
-dist name), using an xor value that flips between the widget background and
-the cross or lasso line colour.  Drawing like that is fast and portable,
+Both those add-ons draw using an "xor" onto the pixels in a widget (hence
+the dist name), using a value that flips between the widget background and
+the cross or lasso line colour.  Drawing like this is fast and portable,
 though doing it as an add-on can potentially clash with what the widget does
 natively.
 
@@ -211,14 +220,14 @@ natively.
 =item *
 
 A single dominant background colour is assumed.  Often shades of grey or
-similar will end up with a contrasting line but though there's no guarantee
-of that.
+similar will end up with a contrasting line but there's no guarantee of
+that.
 
 =item *
 
 The background colour is taken from the widget C<Gtk2::Style> "bg" for
-normal widgets, or from "base" for text oriented widgets like C<Gtk2::Entry>
-and C<Gtk2::TextView>.  C<Goo::Canvas> is recognised as using "base" too.
+normal widgets, or from "base" for text widgets C<Gtk2::Entry> and
+C<Gtk2::TextView>.  C<Goo::Canvas> is recognised as using "base" too.
 
 =item *
 
@@ -231,9 +240,18 @@ might not have the X double-buffering extension.
 
 For multi-window widgets it's necessary to figure out which subwindow is the
 one to draw on.  The xoring recognises the "bin" window of C<Gtk2::Layout>
-(and its subclasses like C<Gnome2::Canvas>), the "text" subwindow of
+(which includes C<Gnome2::Canvas>), the "text" subwindow of
 C<Gtk2::TextView>, and the secret subwindows of C<Gtk2::Entry> and
 C<Goo::Canvas>.
+
+=item *
+
+The SyncCall mechanism is used to protect against flooding the server with
+more drawing than it can keep up with.  Even though a direct approach would
+be one request for each motion, it's still possible to overload the server
+if it sends a lot of motion notifies or if it's not very fast at drawing
+wide lines.  The effect of SyncCall is to delay further drawing until
+hearing back from the server that the previous has completed.
 
 =back
 

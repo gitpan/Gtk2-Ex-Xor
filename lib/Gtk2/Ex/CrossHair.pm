@@ -22,10 +22,11 @@ use Carp;
 use List::Util;
 use POSIX ();
 
-use Gtk2;
+# 1.200 for EVENT_PROPAGATE, Gtk2::GC auto-release
+use Gtk2 '1.200';
 use Gtk2::Ex::Xor;
 
-our $VERSION = 3;
+our $VERSION = 4;
 
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
@@ -96,19 +97,13 @@ sub FINALIZE_INSTANCE {
 sub _cleanup_widgets {
   my ($self) = @_;
   foreach my $widget (@{$self->{'widgets'}}) {
-    if (my $gc = delete $widget->{__PACKAGE__,$self,'gc'}) {
-      # pending this done automatically in Gtk2-Perl 1.190
-      Gtk2::GC->release ($gc);
-    }
+    delete $widget->{__PACKAGE__,$self,'gc'};
   }
 }
 sub _do_style_set {
   my ($widget, $prev_style, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return;
-  if (my $gc = delete $widget->{__PACKAGE__,$self,'gc'}) {
-    # pending this done automatically in Gtk2-Perl 1.190
-    Gtk2::GC->release ($gc);
-  }
+  delete $widget->{__PACKAGE__,$self,'gc'};
 }
 
 sub GET_PROPERTY {
@@ -276,21 +271,18 @@ sub _start {
       }
     }
   }
+
   $self->{'xy_widget'} = $widget;
   $self->{'x'} = $x;
   $self->{'y'} = $y;
-
   if ($widget) { _draw ($self); }
 
-  $self->signal_emit ('moved',$self->{'xy_widget'},$self->{'x'},$self->{'y'});
+  $self->signal_emit ('moved', $widget, $x, $y);
 }
 
 sub end {
   my ($self) = @_;
   if (! $self->{'active'}) { return; }
-
-  $self->signal_emit ('moved', $self->{'xy_widget'}, undef, undef);
-  $self->{'active'} = 0;
 
   if ($self->{'drawn'})  {
     _draw ($self);  # undraw
@@ -298,39 +290,24 @@ sub end {
   }
   delete $self->{'dynamic_setups'};
 
+  $self->signal_emit ('moved', undef, undef, undef);
+  $self->{'active'} = 0;
   $self->notify('active');
 }
 
 # 'motion-notify-event' on a target widget
 sub _do_motion_notify {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return 0; # propagate event
+  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
   if (DEBUG) { print "crosshair motion ", $event->x, ",", $event->y, "\n"; }
+  if (! $self->{'active'}) { return Gtk2::EVENT_PROPAGATE; }
 
-  if (! $self->{'active'}) {
-    return 0;  # propagate event
-  }
-
-  if ($self->{'drawn'}) {
-    _draw ($self);  # undraw old
-  }
-
-  # For 'pointer-motion-hint-mask' do a get_pointer().
-  # Maybe should use $display->get_state here instead of just get_pointer,
-  # but the crosshair at present only works with the mouse, not an arbitrary
-  # input device.
-  ($self->{'x'}, $self->{'y'})
-    = ($event->is_hint
-       ? $widget->get_pointer
-       : Gtk2::Ex::Xor::_event_widget_coords ($widget, $event));
-  $self->{'xy_widget'} = $widget;
-  _draw ($self);    # draw new
-
-  $self->signal_emit ('moved',
-                      $self->{'xy_widget'}, $self->{'x'}, $self->{'y'});
-  return 0; # propagate event
+  _maybe_move ($self, $widget,
+               Gtk2::Ex::Xor::_event_widget_coords ($widget, $event));
+  return Gtk2::EVENT_PROPAGATE;
 }
 
+# 'size-allocate' signal on the widgets
 sub _do_size_allocate {
   my ($widget, $alloc, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return;
@@ -342,87 +319,98 @@ sub _do_size_allocate {
   # if the xy_widget moves we've lost where it was before and so where the
   # lines in the other widgets were drawn, so just redraw the lot (perhaps
   # could keep track of the drawing on each in widget coordinates on each,
-  # except perhaps it depends on NorthWest window gravity anyway)
+  # except probably that depends on NorthWest gravity)
   #
   foreach my $widget (@{$self->{'widgets'}}) {
     $widget->queue_draw;
   }
   # new widget coordinates
-  ($self->{'x'}, $self->{'y'}) = $widget->get_pointer;
-  $self->signal_emit ('moved',
-                      $self->{'xy_widget'}, $self->{'x'}, $self->{'y'});
+  _maybe_move ($self, $widget, $widget->get_pointer);
 }
 
+# 'enter-notify-event' signal on the widgets
 sub _do_enter_notify {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return 0; # propagate event
+  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
   if (DEBUG) { print "crosshair enter ", $event->x, ",", $event->y, "\n"; }
-  if ($self->{'button'}) { return; } # not under grab mode
+  if ($self->{'button'}) { return Gtk2::EVENT_PROPAGATE; } # not grab mode
+
+  _maybe_move ($self, $widget,
+               Gtk2::Ex::Xor::_event_widget_coords ($widget, $event));
+  return Gtk2::EVENT_PROPAGATE;
+}
+
+# 'leave-notify-event' signal on the widgets
+sub _do_leave_notify {
+  my ($widget, $event, $ref_weak_self) = @_;
+  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  if (DEBUG) { print "crosshair leave ", $event->x, ",", $event->y, "\n"; }
+  if ($self->{'button'}) { return Gtk2::EVENT_PROPAGATE; } # not grab mode
+
+  _maybe_move ($self, undef, undef, undef);
+  return Gtk2::EVENT_PROPAGATE;
+}
+
+# 'button-release-event' signal on the widgets
+sub _do_button_release {
+  my ($widget, $event, $ref_weak_self) = @_;
+  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  if ($event->button == $self->{'button'}) {
+    $self->end ($event);
+  }
+  return Gtk2::EVENT_PROPAGATE;
+}
+
+sub _maybe_move {
+  my ($self, $widget, $x, $y) = @_;
+
+  $self->{'pending_widget'} = $widget;
+  $self->{'pending_x'} = $x;
+  $self->{'pending_y'} = $y;
+
+  $self->{'sync_call'} ||= do {
+    require Gtk2::Ex::SyncCall;
+    Gtk2::Ex::SyncCall->sync ($self->{'widgets'}->[0],
+                              \&_sync_call_handler,
+                              Gtk2::Ex::Xor::_ref_weak ($self));
+  };
+}
+sub _sync_call_handler {
+  my ($ref_weak_self) = @_;
+  my $self = $$ref_weak_self || return;
+  $self->{'sync_call'} = undef;
+  if (! $self->{'active'}) { return; }
 
   if ($self->{'drawn'}) {
-    _draw ($self);  # undraw old
+    if (DEBUG >= 2) { print "  undraw\n"; }
+    _draw ($self);
   }
-  ($self->{'x'}, $self->{'y'})
-    = Gtk2::Ex::Xor::_event_widget_coords ($widget, $event);
-  $self->{'xy_widget'} = $widget;
+  $self->{'xy_widget'} = $self->{'pending_widget'};
+  $self->{'x'} = $self->{'pending_x'};
+  $self->{'y'} = $self->{'pending_y'};
   _draw ($self);    # draw new
 
   $self->signal_emit ('moved',
                       $self->{'xy_widget'}, $self->{'x'}, $self->{'y'});
-  return 0; # propagate event
-}
-
-sub _do_leave_notify {
-  my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return 0; # propagate event
-  if (DEBUG) { print "crosshair leave ", $event->x, ",", $event->y, "\n"; }
-  if ($self->{'button'}) { return; } # not under grab mode
-
-  if ($self->{'drawn'})  {
-    _draw ($self);  # undraw
-    $self->{'drawn'} = 0;
-    $self->signal_emit ('moved', $self->{'xy_widget'}, undef, undef);
-  }
-  return 0; # propagate event
-}
-
-sub _do_button_release {
-  my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return 0; # propagate event
-  if (! $self->{'active'} || $event->button != $self->{'button'}) {
-    return 0;  # propagate event
-  }
-
-  if ($self->{'drawn'}) {
-    _draw ($self);  # undraw old
-    $self->{'drawn'} = 0;
-  }
-  # FIXME: does anyone care about the final position?
-  ($self->{'x'}, $self->{'y'})
-    = Gtk2::Ex::Xor::_event_widget_coords ($widget, $event);
-  $self->{'xy_widget'} = $widget;
-  $self->set (active => 0);
-  return 0; # propagate event
 }
 
 sub _do_expose_event {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return 0; # propagate event;
-  if (! $self->{'active'}) {
-    return 0;  # propagate event
-  }
+  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  if (! $self->{'active'}) { return Gtk2::EVENT_PROPAGATE; }
+
   if (DEBUG) { print "CrossHair expose $widget\n"; }
   if ($self->{'drawn'}) {
     _draw ($self, [$widget], $event->region);  # redraw
   }
-  return 0;  # propagate event
+  return Gtk2::EVENT_PROPAGATE;
 }
 
 sub _draw {
   my ($self, $widgets, $clip_region) = @_;
   my $sx = $self->{'x'};
   my $sy = $self->{'y'};
-  my $xy_widget = $self->{'xy_widget'};
+  my $xy_widget = $self->{'xy_widget'} || return; # nothing to draw
 
   $widgets ||= $self->{'widgets'};
   foreach my $widget (@$widgets) {
@@ -548,8 +536,8 @@ intended as a visual guide for the user.
 
         +-----------------+
         |         |       |
-        |         |       |
-        |         |       |
+        |         | mouse |
+        |         |/      |
         | --------+------ |
         |         |       |
         |         |       |
@@ -574,8 +562,8 @@ all the time).
 While the crosshair is active the mouse cursor is set invisible in the
 target windows, since the cross is enough feedback and a cursor tends to
 obscure the lines.  This is done with the WidgetCursor mechanism (see
-L<Gtk2::Ex::WidgetCursor>) and so cooperates with widget or application uses
-of that.
+L<Gtk2::Ex::WidgetCursor>) and so cooperates with other widget or
+application uses of that.
 
 The crosshair is drawn using xors in the widget window.  See
 L<Gtk2::Ex::Xor> for notes on this.

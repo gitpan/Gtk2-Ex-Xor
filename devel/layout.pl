@@ -17,16 +17,15 @@
 # You should have received a copy of the GNU General Public License along
 # with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use strict;
 use warnings;
+use FindBin;
 use Gtk2 '-init';
 
 use Gtk2::Ex::CrossHair;
 use Gtk2::Ex::Lasso;
 
-use File::Basename;
-my $progname = basename($0);
+my $progname = $FindBin::Script;
 
 my $toplevel = Gtk2::Window->new('toplevel');
 $toplevel->set_default_size (500, 300);

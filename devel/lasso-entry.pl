@@ -19,12 +19,12 @@
 
 use strict;
 use warnings;
+use FindBin;
 use Gtk2 '-init';
 use Gtk2::Ex::Lasso;
 use Data::Dumper;
 
-use File::Basename;
-my $progname = basename($0);
+my $progname = $FindBin::Script;
 
 my $toplevel = Gtk2::Window->new('toplevel');
 $toplevel->set_default_size (500, 300);

@@ -25,12 +25,12 @@
 
 use strict;
 use warnings;
+use FindBin;
 use Gtk2 '-init';
 use Gtk2::Ex::CrossHair;
 use Gtk2::Ex::WidgetBits;
 
-use File::Basename;
-my $progname = basename($0);
+my $progname = $FindBin::Script;
 
 my $output_filename = (@ARGV >= 1 ? $ARGV[0]
                        : '/tmp/cross-screenshot.png');
