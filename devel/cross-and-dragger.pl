@@ -38,11 +38,18 @@ $toplevel->add ($scrolled);
 my $viewport = Gtk2::Viewport->new;
 $scrolled->add ($viewport);
 
+# Maybe should work with Viewport passed directly to the crosshair, without
+# the EventBox in between, by getting the secret viewport window as per
+# Gtk2::Ex::Dragger.  But only no-window widgets in a viewport are affected.
+#
+my $eventbox = Gtk2::EventBox->new;
+$viewport->add ($eventbox);
+
 my $image = Gtk2::Image->new_from_file
   ('/usr/share/doc/libgtk2.0-doc/gtk/tree-view-coordinates.png');
-$scrolled->add_with_viewport ($image);
+$eventbox->add ($image);
 
-my $cross = Gtk2::Ex::CrossHair->new (widgets => [ $viewport ],
+my $cross = Gtk2::Ex::CrossHair->new (widgets => [ $eventbox ],
                                       foreground => 'orange');
 my $dragger = Gtk2::Ex::Dragger->new
   (widget => $viewport,

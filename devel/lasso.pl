@@ -20,7 +20,7 @@
 use strict;
 use warnings;
 use FindBin;
-use Gtk2 1.200 '-init';
+use Gtk2 '-init';
 use Gtk2::Ex::Lasso;
 use Data::Dumper;
 
@@ -64,7 +64,7 @@ $area->signal_connect (button_press_event =>
                          my ($area, $event, $userdata) = @_;
                          print "$progname: start button\n";
                          $lasso->start ($event);
-                         return Gtk2::EVENT_PROPAGATE;
+                         return 0; # Gtk2::EVENT_PROPAGATE
                        });
 $area2->add_events(['button-press-mask']);
 $area2->signal_connect (button_press_event =>
@@ -72,20 +72,20 @@ $area2->signal_connect (button_press_event =>
                           my ($area2, $event, $userdata) = @_;
                           print "$progname: start button in area2\n";
                           $lasso->start ($event);
-                          return Gtk2::EVENT_PROPAGATE;
+                          return 0; # Gtk2::EVENT_PROPAGATE
                         });
 
 $area->signal_connect (button_release_event =>
                        sub {
                          my ($area, $event, $userdata) = @_;
                          print "$progname: area1 button release\n";
-                         return Gtk2::EVENT_PROPAGATE;
+                         return 0; # Gtk2::EVENT_PROPAGATE
                        });
 $area2->signal_connect (button_release_event =>
                         sub {
                           my ($area2, $event, $userdata) = @_;
                           print "$progname: area2 button release\n";
-                          return Gtk2::EVENT_PROPAGATE;
+                          return 0; # Gtk2::EVENT_PROPAGATE
                         });
 
 $lasso->signal_connect (moved =>
@@ -104,27 +104,27 @@ $lasso->signal_connect (ended =>
 Gtk2->key_snooper_install
   (sub {
      my ($widget, $event) = @_;
-     $event->type eq 'key-press' || return Gtk2::EVENT_PROPAGATE;
+     $event->type eq 'key-press' || return 0; # Gtk2::EVENT_PROPAGATE
 
      if ($event->keyval == Gtk2::Gdk->keyval_from_name('s')) {
        print "$progname: start key\n";
        $lasso->start ($event);
-       return Gtk2::EVENT_STOP;
+       return 1; # Gtk2::EVENT_STOP
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('e')) {
        print "$progname: end\n";
        $lasso->end;
-       return Gtk2::EVENT_STOP;
+       return 1; # Gtk2::EVENT_STOP
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('r')) {
        print "$progname: redraw\n";
        $area->queue_draw;
-       return Gtk2::EVENT_STOP;
+       return 1; # Gtk2::EVENT_STOP
      } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('2')) {
        print "$progname: toggle area2\n";
        $lasso->set ('widget',
                     ($lasso->get ('widget') == $area ? $area2 : $area));
-       return Gtk2::EVENT_STOP;
+       return 1; # Gtk2::EVENT_STOP
      }
-     return Gtk2::EVENT_PROPAGATE;
+     return 0; # Gtk2::EVENT_PROPAGATE
    });
 
 {
@@ -175,7 +175,7 @@ Gtk2->key_snooper_install
                              Glib::Timeout->add (2000, # milliseconds
                                                  sub {
                                                    $area->unmap;
-                                                   return Glib::SOURCE_REMOVE;
+                                                   return 0; # Glib::SOURCE_REMOVE
                                                  });
                            });
   $vbox->pack_start ($button, 0, 0, 0);
@@ -188,7 +188,7 @@ Gtk2->key_snooper_install
                              Glib::Timeout->add (2000, # milliseconds
                                                  sub {
                                                    $toplevel->iconify;
-                                                   return Glib::SOURCE_REMOVE;
+                                                   return 0; # Glib::SOURCE_REMOVE
                                                  });
                            });
   $vbox->pack_start ($button, 0, 0, 0);
@@ -240,7 +240,7 @@ Gtk2->key_snooper_install
     my $width = $widths[$idx];
     print "$progname: resize to $width,$area_height\n";
     $area->set_size_request ($width, $area_height);
-    return Glib::SOURCE_CONTINUE;
+    return 1; # Glib::SOURCE_CONTINUE
   }
 }
 {
@@ -273,7 +273,7 @@ Gtk2->key_snooper_install
     my $x = $x[$idx];
     print "$progname: reposition to $x,0\n";
     $layout->move ($area, $x, 0);
-    return Glib::SOURCE_CONTINUE;
+    return 1; # Glib::SOURCE_CONTINUE
   }
 }
 {
@@ -304,7 +304,7 @@ Gtk2->key_snooper_install
       $idx = 0;
     }
     $lasso->set(cursor => $cursors[$idx]);
-    return Glib::SOURCE_CONTINUE;
+    return 1; # Glib::SOURCE_CONTINUE
   }
 }
 {
@@ -333,7 +333,7 @@ Gtk2->key_snooper_install
     $idx++;
     if ($idx >= @foregrounds) { $idx = 0; }
     $lasso->set(foreground => $foregrounds[$idx]);
-    return Glib::SOURCE_CONTINUE;
+    return 1; # Glib::SOURCE_CONTINUE
   }
 }
 {
@@ -365,7 +365,7 @@ Gtk2->key_snooper_install
     }
     my $color = Gtk2::Gdk::Color->parse ($backgrounds[$idx]);
     $area->modify_bg ('normal', $color);
-    return Glib::SOURCE_CONTINUE;
+    return 1; # Glib::SOURCE_CONTINUE
   }
 }
 

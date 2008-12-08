@@ -36,7 +36,7 @@
 
 use strict;
 use warnings;
-use Gtk2 1.200 '-init';
+use Gtk2 '-init';
 use Gtk2::Ex::CrossHair;
 use Data::Dumper;
 
@@ -74,7 +74,7 @@ $area->add_events ('button-press-mask');
 $area->signal_connect (button_press_event => sub {
                          my ($area, $event) = @_;
                          $cross->start ($event);
-                         return Gtk2::EVENT_PROPAGATE;
+                         return 0; # Gtk2::EVENT_PROPAGATE
                        });
 
 $toplevel->show_all;

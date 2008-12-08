@@ -124,6 +124,14 @@ $lasso->signal_connect (ended =>
      });
 }
 
+$vbox->pack_start (Gtk2::Label->new(<<'HERE'),0,0,0);
+Drag button 1 for lasso
+Press: S - start lasso.
+   E - end.
+   R - redraw Entry.
+HERE
+
+$entry->grab_focus;
 $toplevel->show_all;
 Gtk2->main;
 exit 0;

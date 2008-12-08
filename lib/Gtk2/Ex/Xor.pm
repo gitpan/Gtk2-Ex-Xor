@@ -24,7 +24,7 @@ use Gtk2;
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
 
-our $VERSION = 4;
+our $VERSION = 5;
 
 
 sub get_gc {

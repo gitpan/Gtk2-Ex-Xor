@@ -22,11 +22,11 @@ use Carp;
 use List::Util;
 use POSIX ();
 
-# 1.200 for EVENT_PROPAGATE, Gtk2::GC auto-release
+# 1.200 for Gtk2::GC auto-release
 use Gtk2 '1.200';
 use Gtk2::Ex::Xor;
 
-our $VERSION = 4;
+our $VERSION = 5;
 
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
@@ -298,13 +298,13 @@ sub end {
 # 'motion-notify-event' on a target widget
 sub _do_motion_notify {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
   if (DEBUG) { print "crosshair motion ", $event->x, ",", $event->y, "\n"; }
-  if (! $self->{'active'}) { return Gtk2::EVENT_PROPAGATE; }
+  if (! $self->{'active'}) { return 0; } # Gtk2::EVENT_PROPAGATE
 
   _maybe_move ($self, $widget,
                Gtk2::Ex::Xor::_event_widget_coords ($widget, $event));
-  return Gtk2::EVENT_PROPAGATE;
+  return 0; # Gtk2::EVENT_PROPAGATE
 }
 
 # 'size-allocate' signal on the widgets
@@ -331,34 +331,34 @@ sub _do_size_allocate {
 # 'enter-notify-event' signal on the widgets
 sub _do_enter_notify {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
   if (DEBUG) { print "crosshair enter ", $event->x, ",", $event->y, "\n"; }
-  if ($self->{'button'}) { return Gtk2::EVENT_PROPAGATE; } # not grab mode
+  if ($self->{'button'}) { return 0; } # not grab mode Gtk2::EVENT_PROPAGATE
 
   _maybe_move ($self, $widget,
                Gtk2::Ex::Xor::_event_widget_coords ($widget, $event));
-  return Gtk2::EVENT_PROPAGATE;
+  return 0; # Gtk2::EVENT_PROPAGATE
 }
 
 # 'leave-notify-event' signal on the widgets
 sub _do_leave_notify {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
   if (DEBUG) { print "crosshair leave ", $event->x, ",", $event->y, "\n"; }
-  if ($self->{'button'}) { return Gtk2::EVENT_PROPAGATE; } # not grab mode
+  if ($self->{'button'}) { return 0; } # not grab mode Gtk2::EVENT_PROPAGATE
 
   _maybe_move ($self, undef, undef, undef);
-  return Gtk2::EVENT_PROPAGATE;
+  return 0; # Gtk2::EVENT_PROPAGATE
 }
 
 # 'button-release-event' signal on the widgets
 sub _do_button_release {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
   if ($event->button == $self->{'button'}) {
     $self->end ($event);
   }
-  return Gtk2::EVENT_PROPAGATE;
+  return 0; # Gtk2::EVENT_PROPAGATE
 }
 
 sub _maybe_move {
@@ -396,14 +396,14 @@ sub _sync_call_handler {
 
 sub _do_expose_event {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
-  if (! $self->{'active'}) { return Gtk2::EVENT_PROPAGATE; }
+  my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
+  if (! $self->{'active'}) { return 0; } # Gtk2::EVENT_PROPAGATE
 
   if (DEBUG) { print "CrossHair expose $widget\n"; }
   if ($self->{'drawn'}) {
     _draw ($self, [$widget], $event->region);  # redraw
   }
-  return Gtk2::EVENT_PROPAGATE;
+  return 0; # Gtk2::EVENT_PROPAGATE
 }
 
 sub _draw {

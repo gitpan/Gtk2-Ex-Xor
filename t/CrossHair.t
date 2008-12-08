@@ -23,8 +23,10 @@ use warnings;
 use Gtk2::Ex::CrossHair;
 use Test::More tests => 10;
 
-ok ($Gtk2::Ex::CrossHair::VERSION >= 4);
-ok (Gtk2::Ex::CrossHair->VERSION  >= 4);
+ok ($Gtk2::Ex::CrossHair::VERSION >= 5,
+    'VERSION variable');
+ok (Gtk2::Ex::CrossHair->VERSION  >= 5,
+    'VERSION method');
 
 require Gtk2;
 diag ("Perl-Gtk2 version ",Gtk2->VERSION);

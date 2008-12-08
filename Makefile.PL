@@ -31,8 +31,7 @@ WriteMakefile
    SIGN         => 1,
 
    PREREQ_PM    => {
-                    # version 1.200 for Gtk2::GC auto-release, new
-                    # constants, and various bug fixes
+                    # version 1.200 for Gtk2::GC auto-release and various
                     'Gtk2' => '1.200',
 
                     # my Glib-Ex-ObjectBits

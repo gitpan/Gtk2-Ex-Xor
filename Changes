@@ -17,6 +17,9 @@ along with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
+Version 5,  December 2008
+    - oops, don't use the EVENT_PROPAGATE constants yet
+
 Version 4,  December 2008
     - use SyncCall for smoothness
     - fix an obscure expose propagation during lasso

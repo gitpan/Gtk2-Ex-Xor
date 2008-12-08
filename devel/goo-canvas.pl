@@ -33,8 +33,11 @@ my $toplevel = Gtk2::Window->new('toplevel');
 $toplevel->set_default_size (500, 300);
 $toplevel->signal_connect (destroy => sub { Gtk2->main_quit; });
 
+my $vbox = Gtk2::VBox->new;
+$toplevel->add ($vbox);
+
 my $scrolled = Gtk2::ScrolledWindow->new;
-$toplevel->add ($scrolled);
+$vbox->pack_start ($scrolled, 1,1,0);
 
 my $canvas = Goo::Canvas->new;
 $canvas->set_scale (2.0);
@@ -94,6 +97,12 @@ Gtk2->key_snooper_install
      }
      return 0; # propagate event
    });
+
+$vbox->pack_start (Gtk2::Label->new(<<'HERE'),0,0,0);
+Drag button 1 for cross, drag other button for lasso.
+Press C for cross start, X for end.
+Press L for lasso start, Esc for end.
+HERE
 
 $toplevel->show_all;
 

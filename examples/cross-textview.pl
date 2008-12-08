@@ -85,14 +85,14 @@ $textview->signal_connect
      if ($event->state >= ['mod1-mask']) {
        if ($event->keyval == Gtk2::Gdk->keyval_from_name('c')) {
          $cross->start ($event);
-         return Gtk2::EVENT_STOP;
+         return 1; # Gtk2::EVENT_STOP
 
        } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('e')) {
          $cross->end;
-         return Gtk2::EVENT_STOP;
+         return 1; # Gtk2::EVENT_STOP
        }
      }
-     return Gtk2::EVENT_PROPAGATE;
+     return 0; # Gtk2::EVENT_PROPAGATE
    });
 
 $toplevel->show_all;

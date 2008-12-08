@@ -22,11 +22,11 @@ use Carp;
 use List::Util qw(min max);
 use Scalar::Util;
 
-# 1.200 for EVENT_PROPAGATE, CURRENT_TIME, Gtk2::GC auto-release
+# 1.200 for Gtk2::GC auto-release and GDK_CURRENT_TIME
 use Gtk2 '1.200';
 use Gtk2::Ex::Xor;
 
-our $VERSION = 4;
+our $VERSION = 5;
 
 # set this to 1 or 2 for some diagnostic prints
 use constant DEBUG => 0;
@@ -294,25 +294,25 @@ sub _update_widgetcursor {
 
 sub _do_expose {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
   if (DEBUG) { print "lasso expose $widget, active=",
                  $self->{'active'}||0,"\n"; }
   if ($self->{'drawn'}) {
     _draw ($self, $event->region);
   }
-  return Gtk2::EVENT_PROPAGATE;
+  return 0; # Gtk2::EVENT_PROPAGATE
 }
 
 # 'motion-notify' on widget, and also called for $lasso->end if it gets a
 # button or motion event
 sub _do_motion_notify {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
 
   _maybe_move ($self,
                $self->{'x1'}, $self->{'y1'},
                Gtk2::Ex::Xor::_event_widget_coords ($widget, $event));
-  return Gtk2::EVENT_PROPAGATE;
+  return 0; # Gtk2::EVENT_PROPAGATE
 }
 
 # 'size-allocate' signal on the widget.
@@ -339,13 +339,13 @@ sub _do_size_allocate {
 
 sub _do_button_release {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
   if (DEBUG) { print "Lasso button release, got ", $event->button,
                  " want ", $self->{'button'}, "\n"; }
   if ($event->button == $self->{'button'}) {
     $self->end ($event);
   }
-  return Gtk2::EVENT_PROPAGATE;
+  return 0; # Gtk2::EVENT_PROPAGATE
 }
 
 sub _maybe_move {
@@ -435,32 +435,32 @@ sub swap_corners {
 # KeySnooper callback
 sub _do_key_snooper {
   my ($target_widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
 
   # ignore key releases
-  $event->type eq 'key-press' || return Gtk2::EVENT_PROPAGATE;
+  $event->type eq 'key-press' || return 0; # Gtk2::EVENT_PROPAGATE
 
   if (DEBUG) { print "Lasso key ", $event->keyval, "\n"; }
 
   if ($event->keyval == Gtk2::Gdk->keyval_from_name('Escape')) {
     $self->abort;
-    return Gtk2::EVENT_STOP;
+    return 1; # Gtk2::EVENT_STOP
 
   } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('space')) {
     $self->swap_corners;
-    return Gtk2::EVENT_STOP;
+    return 1; # Gtk2::EVENT_STOP
 
   } elsif ($event->keyval == Gtk2::Gdk->keyval_from_name('Return')) {
     $self->end ($event);
-    return Gtk2::EVENT_STOP;
+    return 1; # Gtk2::EVENT_STOP
   }
 
-  return Gtk2::EVENT_PROPAGATE;
+  return 0; # Gtk2::EVENT_PROPAGATE
 }
 
 sub _do_grab_broken {
   my ($widget, $event, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return Gtk2::EVENT_PROPAGATE;
+  my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
   if (DEBUG) { print "Lasso grab broken\n"; }
 
   $self->{'grabbed'} = 0;
@@ -477,7 +477,7 @@ sub _do_grab_broken {
   #
   $self->abort ($self, $event);
 
-  return Gtk2::EVENT_PROPAGATE;
+  return 0; # Gtk2::EVENT_PROPAGATE
 }
 
 #------------------------------------------------------------------------------
