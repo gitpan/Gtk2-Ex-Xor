@@ -28,6 +28,7 @@ lib/Gtk2/Ex/Lasso.pm
 lib/Gtk2/Ex/Xor.pm
 Makefile.PL
 MANIFEST			This list of files
+MANIFEST.SKIP
 README
 SIGNATURE
 t/CrossHair.t

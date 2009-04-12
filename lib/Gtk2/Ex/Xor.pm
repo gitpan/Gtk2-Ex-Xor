@@ -1,10 +1,10 @@
-# Copyright 2007, 2008 Kevin Ryde
+# Copyright 2007, 2008, 2009 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
 # Gtk2-Ex-Xor is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as published
-# by the Free Software Foundation; either version 2, or (at your option) any
+# by the Free Software Foundation; either version 3, or (at your option) any
 # later version.
 #
 # Gtk2-Ex-Xor is distributed in the hope that it will be useful, but
@@ -24,7 +24,7 @@ use Gtk2;
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
 
-our $VERSION = 5;
+our $VERSION = 6;
 
 
 sub get_gc {
@@ -265,7 +265,7 @@ L<http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html>
 
 =head1 LICENSE
 
-Copyright 2007, 2008 Kevin Ryde
+Copyright 2007, 2008, 2009 Kevin Ryde
 
 Gtk2-Ex-Xor is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free

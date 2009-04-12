@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright 2008 Kevin Ryde
+# Copyright 2008, 2009 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -21,12 +21,19 @@
 use strict;
 use warnings;
 use Gtk2::Ex::Xor;
-use Test::More tests => 5;
+use Test::More tests => 7;
 
-ok ($Gtk2::Ex::Xor::VERSION >= 5,
-    'VERSION variable');
-ok (Gtk2::Ex::Xor->VERSION  >= 5,
-    'VERSION method');
+my $want_version = 6;
+cmp_ok ($Gtk2::Ex::Xor::VERSION, '>=', $want_version,
+        'VERSION variable');
+cmp_ok (Gtk2::Ex::Xor->VERSION,  '>=', $want_version,
+        'VERSION class method');
+{ ok (eval { Gtk2::Ex::Xor->VERSION($want_version); 1 },
+      "VERSION class check $want_version");
+  my $check_version = $want_version + 1000;
+  ok (! eval { Gtk2::Ex::Xor->VERSION($check_version); 1 },
+      "VERSION class check $check_version");
+}
 
 require Gtk2;
 diag ("Perl-Gtk2 version ",Gtk2->VERSION);
@@ -48,7 +55,10 @@ diag ("Running on       Gtk version ",
       Gtk2::minor_version(), ".",
       Gtk2::micro_version(), ".");
 
+#-----------------------------------------------------------------------------
+
 SKIP: {
+  Gtk2->disable_setlocale;  # leave LC_NUMERIC alone for version nums
   if (! Gtk2->init_check) { skip 'due to no DISPLAY available', 3; }
 
   my $toplevel = Gtk2::Window->new ('toplevel');

@@ -1,12 +1,12 @@
 #!/usr/bin/perl
 
-# Copyright 2007, 2008 Kevin Ryde
+# Copyright 2007, 2008, 2009 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
 # Gtk2-Ex-Xor is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as published
-# by the Free Software Foundation; either version 2, or (at your option) any
+# by the Free Software Foundation; either version 3, or (at your option) any
 # later version.
 #
 # Gtk2-Ex-Xor is distributed in the hope that it will be useful,
@@ -45,20 +45,21 @@ WriteMakefile
                     # optional for Lasso but mandatory for CrossHair
                     # version 5 for weakening fixes
                     'Gtk2::Ex::WidgetCursor' => 5,
-
-                    # actually Gtk2-Perl requires perl 5.8, which has
-                    # List::Util and Scalar::Util builtin already
-                    'List::Util' => 0,
-                    'Scalar::Util' => 0,
                    },
    clean        => { FILES => "CrossHair.html Lasso.html" },
 
    EXTRA_META => <<'HERE',
+optional_features:
+    maximum_tests:
+        description: Have "make test" do as much as possible.
+        requires:
+            Test::Pod: 1.00
 no_index:
     directory:
         - devel
 resources:
     homepage: http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html
+    license: http://www.gnu.org/licenses/#GPL
 HERE
   );
 
@@ -87,16 +88,18 @@ Lasso.html: lib/Gtk2/Ex/Lasso.pm Makefile
 LINT_FILES = $(TO_INST_PM) t/*.t examples/*.pl devel/*.pl
 lint:
 	perl -MO=Lint $(LINT_FILES)
-	podchecker    $(LINT_FILES)
 pc:
+	-podchecker $(LINT_FILES)
 	perlcritic $(LINT_FILES)
+unused:
+	for i in $(LINT_FILES); do perl -Mwarnings::unused -I lib $$i; done
 
 # find files in the dist with mod times this year, but without this year in
 # the copyright line
 copyright-years-check:
 	year=`date +%Y`; \
 	tar tvfz Gtk2-Ex-Xor-$(VERSION).tar.gz \
-	| grep $$year- \
+	| egrep '$$year-|debian/copyright' \
 	| sed 's:^.*Gtk2-Ex-Xor-$(VERSION)/::' \
 	| (result=0; \
 	  while read i; do \

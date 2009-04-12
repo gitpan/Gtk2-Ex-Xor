@@ -1,12 +1,12 @@
 #!/usr/bin/perl
 
-# Copyright 2008 Kevin Ryde
+# Copyright 2008, 2009 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
 # Gtk2-Ex-Xor is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
-# Software Foundation; either version 2, or (at your option) any later
+# Software Foundation; either version 3, or (at your option) any later
 # version.
 #
 # Gtk2-Ex-Xor is distributed in the hope that it will be useful, but WITHOUT
@@ -196,6 +196,7 @@ Gtk2->key_snooper_install
 {
   my $combobox = Gtk2::ComboBox->new_text;
   $vbox->pack_start ($combobox, 0,0,0);
+  $combobox->append_text ('hand1');
   $combobox->append_text ('invisible');
   $combobox->append_text ('undef');
   $combobox->append_text ('boat');
@@ -209,6 +210,10 @@ Gtk2->key_snooper_install
        if ($type eq 'undef') { $type = undef; }
        $lasso->set (cursor => $type);
      });
+  $lasso->signal_connect ('notify::cursor' => sub {
+                            my $cursor = $lasso->get ('cursor');
+                            print "$progname: lasso cursor '$cursor'\n";
+                          });
 }
 {
   my $timer_id;

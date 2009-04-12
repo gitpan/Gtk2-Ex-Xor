@@ -1,10 +1,10 @@
-# Copyright 2007, 2008 Kevin Ryde
+# Copyright 2007, 2008, 2009 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
 # Gtk2-Ex-Xor is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
-# Software Foundation; either version 2, or (at your option) any later
+# Software Foundation; either version 3, or (at your option) any later
 # version.
 #
 # Gtk2-Ex-Xor is distributed in the hope that it will be useful, but WITHOUT
@@ -23,10 +23,10 @@ use List::Util;
 use POSIX ();
 
 # 1.200 for Gtk2::GC auto-release
-use Gtk2 '1.200';
+use Gtk2 1.200;
 use Gtk2::Ex::Xor;
 
-our $VERSION = 5;
+our $VERSION = 6;
 
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
@@ -90,20 +90,23 @@ sub INIT_INSTANCE {
 sub FINALIZE_INSTANCE {
   my ($self) = @_;
   if (DEBUG) { print "CrossHair finalize\n"; }
-  _cleanup_widgets ();
   $self->end;
+  _cleanup_widgets ($self);
 }
-
+sub _gc_key {
+  my ($self) = @_;
+  return __PACKAGE__.'.'.($self+0).'.gc';
+}
 sub _cleanup_widgets {
   my ($self) = @_;
   foreach my $widget (@{$self->{'widgets'}}) {
-    delete $widget->{__PACKAGE__,$self,'gc'};
+    delete $widget->{_gc_key($self)};
   }
 }
 sub _do_style_set {
   my ($widget, $prev_style, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return;
-  delete $widget->{__PACKAGE__,$self,'gc'};
+  delete $widget->{_gc_key($self)}; # possible new colour
 }
 
 sub GET_PROPERTY {
@@ -112,7 +115,7 @@ sub GET_PROPERTY {
   if ($pname eq 'widget') {
     my $widgets = $self->{'widgets'};
     if (@$widgets > 1) {
-      croak __PACKAGE__.": cannot get single 'widget' property when using multiple widgets";
+      croak 'Cannot get single \'widget\' property when using multiple widgets';
     }
     return $widgets->[0];
   }
@@ -133,11 +136,10 @@ sub SET_PROPERTY {
   }
 
   if ($pname eq 'widgets') {
+    _cleanup_widgets ($self); # gc's on old widgets
     my $widgets = $newval;
 
-    _cleanup_widgets (); # old settings
-
-    # These are events we'll need on in button drag mode, when start() is
+    # These are events needed in button drag mode, ie. when start() is
     # called with a button event.  The alternative would be to turn them on
     # by a new Gtk2::Gdk->pointer_grab() to change the implicit grab, though
     # 'button-release-mask' is best turned on in advance in case we're
@@ -180,7 +182,7 @@ sub SET_PROPERTY {
 
   } elsif ($pname eq 'foreground' || $pname eq 'line_width') {
     if ($self->{'drawn'}) { _draw ($self); } # undraw
-    _cleanup_widgets ($self);  # new colour
+    _cleanup_widgets ($self); # new gc's for colour or width
     $self->{$pname} = $newval;
     if ($self->{'active'}) { _draw ($self); }
   }
@@ -417,8 +419,8 @@ sub _draw {
     if (DEBUG) { print "  draw $widget\n"; }
 
     my $win = $widget->Gtk2_Ex_Xor_window || next; # perhaps unrealized
-    my $gc = ($widget->{__PACKAGE__,$self,'gc'} ||= do {
-      if (DEBUG) { print "  create gc\n"; }
+    my $gc = ($widget->{_gc_key($self)} ||= do {
+      if (DEBUG) { print "  create gc, under @{[_gc_key($self)]}\n"; }
       Gtk2::Ex::Xor::get_gc ($widget, $self->{'foreground'},
                              line_width => ($self->{'line_width'} || 0),
                              line_style => ($self->{'line_style'}
@@ -429,6 +431,12 @@ sub _draw {
     });
 
     my ($x, $y) = $xy_widget->translate_coordinates ($widget, $sx, $sy);
+    if (! defined $x) {
+      # if no common ancestor for $xy_widget and $widget
+      # FIXME: translate through root win coords so can have widgets in
+      # different toplevels
+      next;
+    }
     if ($win != $widget->window) {
       my ($wx, $wy) = $win->get_position;
       if (DEBUG) { print "  subwindow offset $wx,$wy\n"; }
@@ -677,7 +685,7 @@ L<http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html>
 
 =head1 LICENSE
 
-Copyright 2007, 2008 Kevin Ryde
+Copyright 2007, 2008, 2009 Kevin Ryde
 
 Gtk2-Ex-Xor is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free

@@ -1,4 +1,4 @@
-# Copyright 2007, 2008 Kevin Ryde
+# Copyright 2007, 2008, 2009 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -23,10 +23,10 @@ use List::Util qw(min max);
 use Scalar::Util;
 
 # 1.200 for Gtk2::GC auto-release and GDK_CURRENT_TIME
-use Gtk2 '1.200';
+use Gtk2 1.200;
 use Gtk2::Ex::Xor;
 
-our $VERSION = 5;
+our $VERSION = 6;
 
 # set this to 1 or 2 for some diagnostic prints
 use constant DEBUG => 0;
@@ -137,6 +137,7 @@ sub SET_PROPERTY {
     }
 
   } elsif ($pname eq 'cursor') {
+    $self->{$pname} = $newval;  # per default GET_PROPERTY
     _update_widgetcursor ($self);
   }
 }
@@ -708,7 +709,7 @@ L<http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html>
 
 =head1 LICENSE
 
-Copyright 2007, 2008 Kevin Ryde
+Copyright 2007, 2008, 2009 Kevin Ryde
 
 Gtk2-Ex-Xor is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free

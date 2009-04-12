@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright 2008 Kevin Ryde
+# Copyright 2008, 2009 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -21,12 +21,28 @@
 use strict;
 use warnings;
 use Gtk2::Ex::CrossHair;
-use Test::More tests => 10;
+use Test::More tests => 17;
 
-ok ($Gtk2::Ex::CrossHair::VERSION >= 5,
-    'VERSION variable');
-ok (Gtk2::Ex::CrossHair->VERSION  >= 5,
-    'VERSION method');
+my $want_version = 6;
+cmp_ok ($Gtk2::Ex::CrossHair::VERSION, '>=', $want_version,
+        'VERSION variable');
+cmp_ok (Gtk2::Ex::CrossHair->VERSION,  '>=', $want_version,
+        'VERSION class method');
+{ ok (eval { Gtk2::Ex::CrossHair->VERSION($want_version); 1 },
+      "VERSION class check $want_version");
+  my $check_version = $want_version + 1000;
+  ok (! eval { Gtk2::Ex::CrossHair->VERSION($check_version); 1 },
+      "VERSION class check $check_version");
+}
+{
+  my $cross = Gtk2::Ex::CrossHair->new;
+  ok ($cross->VERSION  >= $want_version, 'VERSION objectmethod');
+  ok (eval { $cross->VERSION($want_version); 1 },
+      "VERSION object check $want_version");
+  my $check_version = $want_version + 1000;
+  ok (! eval { $cross->VERSION($check_version); 1 },
+      "VERSION object check $check_version");
+}
 
 require Gtk2;
 diag ("Perl-Gtk2 version ",Gtk2->VERSION);
@@ -51,7 +67,13 @@ diag ("Running on       Gtk version ",
 # return an arrayref
 sub leftover_fields {
   my ($widget) = @_;
-  return [ grep /Gtk2::Ex::CrossHair/, keys %$widget ];
+  my @leftover = grep /Gtk2::Ex::CrossHair/, keys %$widget;
+  if (@leftover) {
+    my %leftover;
+    @leftover{@leftover} = @{$widget}{@leftover}; # hash slice
+    diag "leftover fields: ", explain \%leftover;
+  }
+  return \@leftover;
 }
 
 sub main_iterations {
@@ -60,13 +82,13 @@ sub main_iterations {
     $count++;
     Gtk2->main_iteration_do (0);
   }
-  print "main_iterations(): ran $count events/iterations\n";
+  diag "main_iterations(): ran $count events/iterations\n";
 }
 
 sub show_wait {
   my ($widget) = @_;
   my $t_id = Glib::Timeout->add (10_000, sub {
-                                   print "Timeout waiting for map event\n";
+                                   diag "Timeout waiting for map event\n";
                                    exit 1;
                                  });
   my $s_id = $widget->signal_connect (map_event => sub {
@@ -79,9 +101,13 @@ sub show_wait {
   Glib::Source->remove ($t_id);
 }
 
+
+#-----------------------------------------------------------------------------
+
 SKIP: {
   require Gtk2;
-  if (! Gtk2->init_check) { skip 'due to no DISPLAY available', 8; }
+  Gtk2->disable_setlocale;  # leave LC_NUMERIC alone for version nums
+  if (! Gtk2->init_check) { skip 'due to no DISPLAY available', 10; }
 
 
   # destroyed when weakened on unrealized
@@ -93,9 +119,9 @@ SKIP: {
     Scalar::Util::weaken ($weak_cross);
     $cross = undef;
     main_iterations();
-    is ($weak_cross, undef);
+    is ($weak_cross, undef, 'weaken unrealized - destroyed');
     is_deeply (leftover_fields($widget), [],
-               'no CrossHair data left behind');
+               'weaken unrealized - no CrossHair data left behind');
     $widget->destroy;
   }
 
@@ -107,26 +133,40 @@ SKIP: {
     my $weak_cross = $cross;
     Scalar::Util::weaken ($weak_cross);
     $cross = undef;
-    is ($weak_cross, undef);
+    is ($weak_cross, undef, 'weaken realized - destroyed');
     is_deeply (leftover_fields($widget), [],
-               'no CrossHair data left behind');
+               'weaken realized - no CrossHair data left behind');
     $widget->destroy;
   }
 
   # destroyed when weakened on active
   {
     my $widget = Gtk2::Window->new ('toplevel');
-    my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
+    $widget->set_size_request (100, 100);
     show_wait ($widget);
-    main_iterations();
+
+    # temporary warp to have mouse pointer within $widget
+    my $display = $widget->get_display;
+    my ($screen,$x,$y) = $display->get_pointer;
+    my ($widget_x,$widget_y) = $widget->window->get_origin;
+    $display->warp_pointer($widget->get_screen,$widget_x+50,$widget_y+50);
+
+    my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
     $cross->start;
+    # sync and iterate to make the cross draw and use its gc
+    $display->sync; 
+    main_iterations();
+
     my $weak_cross = $cross;
     Scalar::Util::weaken ($weak_cross);
     $cross = undef;
-    is ($weak_cross, undef);
+    main_iterations();
+    is ($weak_cross, undef, 'weaken active - destroyed');
     is_deeply (leftover_fields($widget), [],
-               'no CrossHair data left behind');
+               'weaken active - no CrossHair data left behind');
+
     $widget->destroy;
+    $display->warp_pointer($screen,$x,$y);
   }
 
   # start() emits "notify::active"
@@ -137,11 +177,11 @@ SKIP: {
     my $seen_notify = 0;
     $cross->signal_connect ('notify::active' => sub { $seen_notify = 1; });
     $cross->start;
-    is ($seen_notify, 1);
+    is ($seen_notify, 1, 'start() emits notify::active');
     $widget->destroy;
   }
 
-  # end() emits "notify::active"
+  # end()emits "notify::active"
   {
     my $widget = Gtk2::Window->new ('toplevel');
     $widget->realize;
@@ -150,9 +190,49 @@ SKIP: {
     my $seen_notify = 0;
     $cross->signal_connect ('notify::active' => sub { $seen_notify = 1; });
     $cross->end;
-    is ($seen_notify, 1);
+    is ($seen_notify, 1, 'end() emits notify::active');
     $widget->destroy;
   }
+
+  # leftovers on changing widget, and switching to a widget without a common
+  # ancestor with the previous
+  {
+    my $widget = Gtk2::Window->new ('toplevel');
+    my $widget2 = Gtk2::Window->new ('toplevel');
+    $widget->set_size_request (100, 100);
+    show_wait ($widget);
+    show_wait ($widget2);
+
+    # temporary warp to have mouse pointer within $widget
+    my $display = $widget->get_display;
+    my ($screen,$x,$y) = $display->get_pointer;
+    my ($widget_x,$widget_y) = $widget->window->get_origin;
+    $display->warp_pointer($widget->get_screen,$widget_x+50,$widget_y+50);
+
+    my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
+    $cross->start;
+    # sync and iterate to make the cross draw and use its gc
+    $display->sync;
+    main_iterations();
+
+    $cross->set (widget => $widget2);
+    ($widget_x,$widget_y) = $widget2->window->get_origin;
+    $display->warp_pointer($widget2->get_screen,$widget_x+50,$widget_y+50);
+    $display->sync;
+    main_iterations();
+
+    is_deeply (leftover_fields($widget), [],
+               'change widget - no CrossHair data left behind');
+
+    $cross->set (widgets => []);
+    is_deeply (leftover_fields($widget2), [],
+               'change to no widgets - no CrossHair data left behind');
+
+    $widget->destroy;
+    $widget2->destroy;
+    $display->warp_pointer($screen,$x,$y);
+  }
+
 }
 
 exit 0;

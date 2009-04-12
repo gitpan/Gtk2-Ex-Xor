@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright 2008 Kevin Ryde
+# Copyright 2008, 2009 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -21,12 +21,28 @@
 use strict;
 use warnings;
 use Gtk2::Ex::Lasso;
-use Test::More tests => 8;
+use Test::More tests => 13;
 
-ok ($Gtk2::Ex::Lasso::VERSION >= 5,
-    'VERSION variable');
-ok (Gtk2::Ex::Lasso->VERSION  >= 5,
-    'VERSION method');
+my $want_version = 6;
+cmp_ok ($Gtk2::Ex::Lasso::VERSION, '>=', $want_version,
+        'VERSION variable');
+cmp_ok (Gtk2::Ex::Lasso->VERSION,  '>=', $want_version,
+        'VERSION class method');
+{ ok (eval { Gtk2::Ex::Lasso->VERSION($want_version); 1 },
+      "VERSION class check $want_version");
+  my $check_version = $want_version + 1000;
+  ok (! eval { Gtk2::Ex::Lasso->VERSION($check_version); 1 },
+      "VERSION class check $check_version");
+}
+{
+  my $lasso = Gtk2::Ex::Lasso->new;
+  ok ($lasso->VERSION  >= $want_version, 'VERSION objectmethod');
+  ok (eval { $lasso->VERSION($want_version); 1 },
+      "VERSION object check $want_version");
+  my $check_version = $want_version + 1000;
+  ok (! eval { $lasso->VERSION($check_version); 1 },
+      "VERSION object check $check_version");
+}
 
 require Gtk2;
 diag ("Perl-Gtk2 version ",Gtk2->VERSION);
@@ -54,13 +70,13 @@ sub main_iterations {
     $count++;
     Gtk2->main_iteration_do (0);
   }
-  print "main_iterations(): ran $count events/iterations\n";
+  diag "main_iterations(): ran $count events/iterations\n";
 }
 
 sub show_wait {
   my ($widget) = @_;
   my $t_id = Glib::Timeout->add (10_000, sub {
-                                   print "Timeout waiting for map event\n";
+                                   diag "Timeout waiting for map event\n";
                                    exit 1;
                                  });
   my $s_id = $widget->signal_connect (map_event => sub {
@@ -73,8 +89,11 @@ sub show_wait {
   Glib::Source->remove ($t_id);
 }
 
+#-----------------------------------------------------------------------------
+
 SKIP: {
   require Gtk2;
+  Gtk2->disable_setlocale;  # leave LC_NUMERIC alone for version nums
   if (! Gtk2->init_check) { skip 'due to no DISPLAY available', 6; }
 
   # return an arrayref
