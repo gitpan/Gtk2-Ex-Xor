@@ -16,17 +16,17 @@
 # with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# "libtest-pod-perl (>= 1.00)" could be in Build-Depends for more
-# tests, but it's optional and just makes the build tools drag in more
-# stuff.
+# Build-Depends could have the "maximum_tests" modules from
+# Makefile.PL for more tests, but they're optional author tests really
+# and would just make the build tools drag in more stuff.
 
 Source: libgtk2-ex-xor-perl
 Section: perl
 Priority: optional
 Build-Depends: cdbs, debhelper (>= 5)
 Maintainer: Kevin Ryde <user42@zip.com.au>
-Standards-Version: 3.8.1
-Homepage: http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html
+Standards-Version: 3.8.3
+Homepage: http://user42.tuxfamily.org/gtk2-ex-xor/index.html
 Bugs: mailto:user42@zip.com.au
 
 Package: libgtk2-ex-xor-perl

@@ -17,7 +17,10 @@ along with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-Version 6,  April 2008
+Version 7,  September 2009
+    - CrossHair allow widgets in different toplevels of same screen
+
+Version 6,  April 2009
     - fix for cursor setting on lasso
     - fix for gc freeing in crosshair
 

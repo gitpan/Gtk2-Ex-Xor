@@ -16,6 +16,7 @@
 # with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 package Gtk2::Ex::Xor;
+use 5.008;
 use strict;
 use warnings;
 use Carp;
@@ -24,7 +25,7 @@ use Gtk2;
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
 
-our $VERSION = 6;
+our $VERSION = 7;
 
 
 sub get_gc {
@@ -44,10 +45,13 @@ sub get_gc {
       my $str = $fg_color;
       $fg_color = Gtk2::Gdk::Color->parse ($str);
       if (! $fg_color) {
-        carp "Gtk2::Gdk::Color->parse() cannot parse '$str' (fallback on style foreground)";
+        carp "Gtk2::Gdk::Color->parse() cannot parse '$str' (fallback to style foreground)";
         goto STYLE;
       }
     }
+    # a shared colour alloc is friendlier to pseudo-colour visuals, but if
+    # the rest of gtk is using the rgb chunk anyway then may as well do the
+    # same
     $colormap->rgb_find_color ($fg_color);
   }
 
@@ -72,7 +76,7 @@ sub _event_widget_coords {
 
   # Do a get_pointer() to support 'pointer-motion-hint-mask'.
   # Maybe should use $display->get_state here instead of just get_pointer,
-  # but crosshair and lasso at present only works with the mouse, not an
+  # but crosshair and lasso at present only work with the mouse, not an
   # arbitrary input device.
   if ($event->can('is_hint') && $event->is_hint) {
     return $widget->get_pointer;
@@ -261,7 +265,7 @@ L<Gtk2::Ex::CrossHair>, L<Gtk2::Ex::Lasso>
 
 =head1 HOME PAGE
 
-L<http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html>
+L<http://user42.tuxfamily.org/gtk2-ex-xor/index.html>
 
 =head1 LICENSE
 

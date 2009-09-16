@@ -21,9 +21,17 @@
 use strict;
 use warnings;
 use Gtk2::Ex::Xor;
-use Test::More tests => 7;
+use Test::More tests => 8;
 
-my $want_version = 6;
+use FindBin;
+use File::Spec;
+use lib File::Spec->catdir($FindBin::Bin,'inc');
+use MyTestHelpers;
+
+SKIP: { eval 'use Test::NoWarnings; 1'
+          or skip 'Test::NoWarnings not available', 1; }
+
+my $want_version = 7;
 cmp_ok ($Gtk2::Ex::Xor::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::Xor->VERSION,  '>=', $want_version,
@@ -36,24 +44,7 @@ cmp_ok (Gtk2::Ex::Xor->VERSION,  '>=', $want_version,
 }
 
 require Gtk2;
-diag ("Perl-Gtk2 version ",Gtk2->VERSION);
-diag ("Perl-Glib version ",Glib->VERSION);
-diag ("Compiled against Glib version ",
-      Glib::MAJOR_VERSION(), ".",
-      Glib::MINOR_VERSION(), ".",
-      Glib::MICRO_VERSION(), ".");
-diag ("Running on       Glib version ",
-      Glib::major_version(), ".",
-      Glib::minor_version(), ".",
-      Glib::micro_version(), ".");
-diag ("Compiled against Gtk version ",
-      Gtk2::MAJOR_VERSION(), ".",
-      Gtk2::MINOR_VERSION(), ".",
-      Gtk2::MICRO_VERSION(), ".");
-diag ("Running on       Gtk version ",
-      Gtk2::major_version(), ".",
-      Gtk2::minor_version(), ".",
-      Gtk2::micro_version(), ".");
+MyTestHelpers::glib_gtk_versions();
 
 #-----------------------------------------------------------------------------
 

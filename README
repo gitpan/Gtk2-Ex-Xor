@@ -1,4 +1,4 @@
-Copyright 2008 Kevin Ryde
+Copyright 2008, 2009 Kevin Ryde
 
 This file is part of Gtk2-Ex-Xor.
 
@@ -30,6 +30,4 @@ widget(s).
 The prerequisites are Gtk2-Perl and my Glib-Ex-ObjectBits stuff.
 The Gtk2-Ex-Xor home page is
 
-    http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html
-
-Bug reports to the author at user42@zip.com.au please.
+    http://user42.tuxfamily.org/gtk2-ex-xor/index.html

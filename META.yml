@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Gtk2-Ex-Xor
-version:             6
+version:             7
 abstract:            Helpers for Gtk2 widgets.
 license:             gpl
 author:              
@@ -21,10 +21,21 @@ optional_features:
     maximum_tests:
         description: Have "make test" do as much as possible.
         requires:
+            Parse::CPAN::Meta: 0
             Test::Pod: 1.00
+            Test::NoWarnings: 0
+            Test::DistManifest: 0
+            YAML: 0
+            YAML::Syck: 0
+            YAML::Tiny: 0
+            YAML::XS: 0
 no_index:
+    package:
+        - Gtk2::Bin
     directory:
         - devel
+        - inc
+        - t
 resources:
-    homepage: http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html
-    license: http://www.gnu.org/licenses/#GPL
+    homepage: http://user42.tuxfamily.org/gtk2-ex-xor/index.html
+    license: http://www.gnu.org/licenses/gpl.html

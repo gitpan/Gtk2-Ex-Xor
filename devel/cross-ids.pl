@@ -20,14 +20,52 @@
 
 use strict;
 use warnings;
+use FindBin;
 use Gtk2 '-init';
 use Gtk2::Ex::CrossHair;
 use Data::Dumper;
 
-use FindBin;
 my $progname = $FindBin::Script;
 
-my $toplevel = Gtk2::Window->new('toplevel');
+my $widget = Gtk2::Window->new ('toplevel');
+$widget->set_size_request (100, 100);
+show_wait ($widget);
+
+# temporary warp to have mouse pointer within $widget
+my $display = $widget->get_display;
+my ($screen,$x,$y) = $display->get_pointer;
+my ($widget_x,$widget_y) = $widget->window->get_origin;
+$display->warp_pointer($widget->get_screen,$widget_x+50,$widget_y+50);
+
+is_deeply (leftover_fields($widget), [],
+           'weaken active - initially no CrossHair data');
+
+my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
+is_deeply (leftover_fields($widget), [],
+           'weaken active - initially no CrossHair data');
+$cross->start;
+diag explain $cross;
+# sync and iterate to make the cross draw and use its gc
+$display->sync;
+MyTestHelpers::main_iterations();
+
+is_deeply (leftover_fields($widget), [],
+           'weaken active - initially no CrossHair data');
+
+my $weak_cross = $cross;
+Scalar::Util::weaken ($weak_cross);
+$cross = undef;
+MyTestHelpers::main_iterations();
+is ($weak_cross, undef, 'weaken active - destroyed');
+is_deeply (leftover_fields($widget), [],
+           'weaken active - no CrossHair data left behind');
+
+$widget->destroy;
+$display->warp_pointer($screen,$x,$y);
+exit 0;
+}
+
+  my $toplevel = Gtk2::Window->new('toplevel');
 $toplevel->signal_connect (destroy => sub { Gtk2->main_quit });
 
 my $hbox = Gtk2::HBox->new (0, 0);

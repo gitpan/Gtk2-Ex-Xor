@@ -7,7 +7,9 @@ debian/copyright
 debian/rules
 debian/watch
 devel/cross-and-dragger.pl
+devel/cross-ids.pl
 devel/cross-screenshot.pl
+devel/cross-toplevels.pl
 devel/cross.pl
 devel/gnome-canvas.pl
 devel/goo-canvas.pl
@@ -23,6 +25,8 @@ examples/cross-area.pl
 examples/cross-label.pl
 examples/cross-textview.pl
 examples/lasso-area.pl
+inc/MyMakeMakerExtras.pm
+junk/canvas.pl
 lib/Gtk2/Ex/CrossHair.pm
 lib/Gtk2/Ex/Lasso.pm
 lib/Gtk2/Ex/Xor.pm
@@ -31,8 +35,11 @@ MANIFEST			This list of files
 MANIFEST.SKIP
 README
 SIGNATURE
+t/0-META-read.t
+t/0-Test-DistManifest.t
+t/0-Test-Pod.t
 t/CrossHair.t
+t/inc/MyTestHelpers.pm
 t/Lasso.t
-t/pod.t
 t/Xor.t
 META.yml                                 Module meta-data (added by MakeMaker)

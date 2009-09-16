@@ -21,9 +21,17 @@
 use strict;
 use warnings;
 use Gtk2::Ex::CrossHair;
-use Test::More tests => 17;
+use Test::More tests => 15;
 
-my $want_version = 6;
+use FindBin;
+use File::Spec;
+use lib File::Spec->catdir($FindBin::Bin,'inc');
+use MyTestHelpers;
+
+# SKIP: { eval 'use Test::NoWarnings; 1'
+#           or skip 'Test::NoWarnings not available', 1; }
+
+my $want_version = 7;
 cmp_ok ($Gtk2::Ex::CrossHair::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::CrossHair->VERSION,  '>=', $want_version,
@@ -45,29 +53,17 @@ cmp_ok (Gtk2::Ex::CrossHair->VERSION,  '>=', $want_version,
 }
 
 require Gtk2;
-diag ("Perl-Gtk2 version ",Gtk2->VERSION);
-diag ("Perl-Glib version ",Glib->VERSION);
-diag ("Compiled against Glib version ",
-      Glib::MAJOR_VERSION(), ".",
-      Glib::MINOR_VERSION(), ".",
-      Glib::MICRO_VERSION(), ".");
-diag ("Running on       Glib version ",
-      Glib::major_version(), ".",
-      Glib::minor_version(), ".",
-      Glib::micro_version(), ".");
-diag ("Compiled against Gtk version ",
-      Gtk2::MAJOR_VERSION(), ".",
-      Gtk2::MINOR_VERSION(), ".",
-      Gtk2::MICRO_VERSION(), ".");
-diag ("Running on       Gtk version ",
-      Gtk2::major_version(), ".",
-      Gtk2::minor_version(), ".",
-      Gtk2::micro_version(), ".");
+MyTestHelpers::glib_gtk_versions();
 
 # return an arrayref
 sub leftover_fields {
   my ($widget) = @_;
   my @leftover = grep /Gtk2::Ex::CrossHair/, keys %$widget;
+
+  #   if (my $connected = any_signal_connections ($widget)) {
+  #     push @leftover, "signal $connected";
+  #   }
+
   if (@leftover) {
     my %leftover;
     @leftover{@leftover} = @{$widget}{@leftover}; # hash slice
@@ -76,25 +72,18 @@ sub leftover_fields {
   return \@leftover;
 }
 
-sub main_iterations {
-  my $count = 0;
-  while (Gtk2->events_pending) {
-    $count++;
-    Gtk2->main_iteration_do (0);
-  }
-  diag "main_iterations(): ran $count events/iterations\n";
-}
-
 sub show_wait {
   my ($widget) = @_;
-  my $t_id = Glib::Timeout->add (10_000, sub {
-                                   diag "Timeout waiting for map event\n";
-                                   exit 1;
-                                 });
-  my $s_id = $widget->signal_connect (map_event => sub {
-                                        Gtk2->main_quit;
-                                        return 0; # propagate event
-                                      });
+  my ($t_id, $s_id);
+  $t_id = Glib::Timeout->add (10_000, # 10 seconds
+                              sub {
+                                diag "Timeout waiting for map event\n";
+                                exit 1;
+                              });
+  $s_id = $widget->signal_connect (map_event => sub {
+                                     Gtk2->main_quit;
+                                     return 0; # propagate event
+                                   });
   $widget->show;
   Gtk2->main;
   $widget->signal_handler_disconnect ($s_id);
@@ -107,8 +96,20 @@ sub show_wait {
 SKIP: {
   require Gtk2;
   Gtk2->disable_setlocale;  # leave LC_NUMERIC alone for version nums
-  if (! Gtk2->init_check) { skip 'due to no DISPLAY available', 10; }
+  if (! Gtk2->init_check) { skip 'due to no DISPLAY available', 8; }
 
+
+  # destroyed when weakened empty
+  {
+    my $cross = Gtk2::Ex::CrossHair->new;
+    my $weak_cross = $cross;
+    require Scalar::Util;
+    Scalar::Util::weaken ($weak_cross);
+    undef $cross;
+    is ($weak_cross, undef, 'weaken empty - destroyed');
+    diag explain $weak_cross;
+    if ($weak_cross) { MyTestHelpers::findrefs ($weak_cross); }
+  }
 
   # destroyed when weakened on unrealized
   {
@@ -117,9 +118,14 @@ SKIP: {
     my $weak_cross = $cross;
     require Scalar::Util;
     Scalar::Util::weaken ($weak_cross);
-    $cross = undef;
-    main_iterations();
+    undef $cross;
+    MyTestHelpers::main_iterations();
     is ($weak_cross, undef, 'weaken unrealized - destroyed');
+    diag explain $widget;
+    diag explain $weak_cross;
+    if ($weak_cross) {
+      MyTestHelpers::findrefs ($weak_cross);
+    }
     is_deeply (leftover_fields($widget), [],
                'weaken unrealized - no CrossHair data left behind');
     $widget->destroy;
@@ -151,22 +157,30 @@ SKIP: {
     my ($widget_x,$widget_y) = $widget->window->get_origin;
     $display->warp_pointer($widget->get_screen,$widget_x+50,$widget_y+50);
 
+    is_deeply (leftover_fields($widget), [],
+               'weaken active - initially no CrossHair data');
+
     my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
     $cross->start;
     # sync and iterate to make the cross draw and use its gc
-    $display->sync; 
-    main_iterations();
+    $display->sync;
+    MyTestHelpers::main_iterations();
 
     my $weak_cross = $cross;
     Scalar::Util::weaken ($weak_cross);
     $cross = undef;
-    main_iterations();
+    MyTestHelpers::main_iterations();
     is ($weak_cross, undef, 'weaken active - destroyed');
+    if ($weak_cross) {
+      diag explain $weak_cross;
+      MyTestHelpers::findrefs ($weak_cross);
+    }
     is_deeply (leftover_fields($widget), [],
                'weaken active - no CrossHair data left behind');
 
     $widget->destroy;
     $display->warp_pointer($screen,$x,$y);
+    exit 0;
   }
 
   # start() emits "notify::active"
@@ -181,7 +195,7 @@ SKIP: {
     $widget->destroy;
   }
 
-  # end()emits "notify::active"
+  # end() emits "notify::active"
   {
     my $widget = Gtk2::Window->new ('toplevel');
     $widget->realize;
@@ -213,14 +227,15 @@ SKIP: {
     $cross->start;
     # sync and iterate to make the cross draw and use its gc
     $display->sync;
-    main_iterations();
+    MyTestHelpers::main_iterations();
 
     $cross->set (widget => $widget2);
     ($widget_x,$widget_y) = $widget2->window->get_origin;
     $display->warp_pointer($widget2->get_screen,$widget_x+50,$widget_y+50);
     $display->sync;
-    main_iterations();
+    MyTestHelpers::main_iterations();
 
+    diag explain $widget;
     is_deeply (leftover_fields($widget), [],
                'change widget - no CrossHair data left behind');
 

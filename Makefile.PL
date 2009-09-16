@@ -21,6 +21,8 @@ use 5.008;
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
+use lib 'inc';
+use MyMakeMakerExtras;
 
 WriteMakefile
   (NAME         => 'Gtk2-Ex-Xor',
@@ -46,93 +48,39 @@ WriteMakefile
                     # version 5 for weakening fixes
                     'Gtk2::Ex::WidgetCursor' => 5,
                    },
-   clean        => { FILES => "CrossHair.html Lasso.html" },
+   clean        => { FILES => "CrossHair.html Lasso.html Xor.html" },
 
-   EXTRA_META => <<'HERE',
+   EXTRA_META => MyMakeMakerExtras::strip_comments(<<'HERE'),
 optional_features:
     maximum_tests:
         description: Have "make test" do as much as possible.
         requires:
+            Parse::CPAN::Meta: 0
             Test::Pod: 1.00
+            Test::NoWarnings: 0
+            Test::DistManifest: 0
+            # Test::YAML::Meta: 0
+            YAML: 0
+            YAML::Syck: 0
+            YAML::Tiny: 0
+            YAML::XS: 0
 no_index:
+    package:
+        # use of "package Gtk2::Bin" adding a private method
+        - Gtk2::Bin
     directory:
         - devel
+        - inc
+        - t
 resources:
-    homepage: http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html
-    license: http://www.gnu.org/licenses/#GPL
+    homepage: http://user42.tuxfamily.org/gtk2-ex-xor/index.html
+    license: http://www.gnu.org/licenses/gpl.html
 HERE
   );
 
-sub MY::postamble {
-  return <<'MAKE_FRAG';
-
-myman:
-	mv MANIFEST MANIFEST.old
-	touch SIGNATURE
-	(make manifest 2>&1; diff -u MANIFEST.old MANIFEST) |less
-
-CrossHair.html: lib/Gtk2/Ex/CrossHair.pm Makefile
-	-perl -MPod::Simple::HTML -e Pod::Simple::HTML::go \
-	  lib/Gtk2/Ex/CrossHair.pm \
-	| sed 's!http://search.cpan.org/perldoc?Glib%3A%3A\([^"]*\)!http://gtk2-perl.sourceforge.net/doc/pod/Glib/\1.html!' \
-	| sed 's!http://search.cpan.org/perldoc?Gtk2%3A%3A\([^"%]*\)"!http://gtk2-perl.sourceforge.net/doc/pod/Gtk2/\1.html"!' \
-	  >CrossHair.html
-
-Lasso.html: lib/Gtk2/Ex/Lasso.pm Makefile
-	-perl -MPod::Simple::HTML -e Pod::Simple::HTML::go \
-	  lib/Gtk2/Ex/Lasso.pm \
-	| sed 's!http://search.cpan.org/perldoc?Glib%3A%3A\([^"]*\)!http://gtk2-perl.sourceforge.net/doc/pod/Glib/\1.html!' \
-	| sed 's!http://search.cpan.org/perldoc?Gtk2%3A%3A\([^"%]*\)"!http://gtk2-perl.sourceforge.net/doc/pod/Gtk2/\1.html"!' \
-	  >Lasso.html
-
-LINT_FILES = $(TO_INST_PM) t/*.t examples/*.pl devel/*.pl
-lint:
-	perl -MO=Lint $(LINT_FILES)
-pc:
-	-podchecker $(LINT_FILES)
-	perlcritic $(LINT_FILES)
-unused:
-	for i in $(LINT_FILES); do perl -Mwarnings::unused -I lib $$i; done
-
-# find files in the dist with mod times this year, but without this year in
-# the copyright line
-copyright-years-check:
-	year=`date +%Y`; \
-	tar tvfz Gtk2-Ex-Xor-$(VERSION).tar.gz \
-	| egrep '$$year-|debian/copyright' \
-	| sed 's:^.*Gtk2-Ex-Xor-$(VERSION)/::' \
-	| (result=0; \
-	  while read i; do \
-	    case $$i in \
-	      '' | */ \
-	      | debian/changelog | debian/compat \
-	      | t/pod.t \
-	      | COPYING | MANIFEST | SIGNATURE | META.yml) \
-	      continue ;; \
-	    esac; \
-	    if test -e "$(srcdir)/$$i"; then f="$(srcdir)/$$i"; \
-	    else f="$$i"; fi; \
-	    if ! grep -q "Copyright.*$$year" $$f; then \
-	      echo "$$i:1: this file"; \
-	      grep Copyright $$f; \
-	      result=1; \
-	    fi; \
-	  done; \
-	  exit $$result)
-
-debug-constants-check:
-	if egrep -n 'DEBUG => [^0]' $(TO_INST_PM); then exit 1; else exit 0; fi
-
-diff-prev:
-	rm -rf diff.tmp
-	mkdir diff.tmp
-	cd diff.tmp \
-	&& tar xfz ../$(NAME)-`expr $(VERSION) - 1`.tar.gz \
-	&& tar xfz ../$(NAME)-$(VERSION).tar.gz
-	-cd diff.tmp; diff -ur $(NAME)-`expr $(VERSION) - 1` \
-	                       $(NAME)-$(VERSION) >tree.diff
-	-less diff.tmp/tree.diff
-	rm -rf diff.tmp
-
-MAKE_FRAG
+#------------------------------------------------------------------------------
+package MY;
+sub postamble {
+  my ($makemaker) = @_;
+  return MyMakeMakerExtras::postamble($makemaker);
 }

@@ -16,6 +16,7 @@
 # with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 package Gtk2::Ex::Lasso;
+use 5.008;
 use strict;
 use warnings;
 use Carp;
@@ -26,7 +27,7 @@ use Scalar::Util;
 use Gtk2 1.200;
 use Gtk2::Ex::Xor;
 
-our $VERSION = 6;
+our $VERSION = 7;
 
 # set this to 1 or 2 for some diagnostic prints
 use constant DEBUG => 0;
@@ -427,7 +428,7 @@ sub swap_corners {
   _maybe_move ($self,
                $self->{'x2'}, $self->{'y2'},
                $self->{'x1'}, $self->{'y1'});
-  
+
   require Gtk2::Ex::WidgetBits;
   Gtk2::Ex::WidgetBits::warp_pointer ($self->{'widget'}, $x1, $y1);
 }
@@ -705,7 +706,7 @@ L<Gtk2::Ex::WidgetCursor>
 
 =head1 HOME PAGE
 
-L<http://www.geocities.com/user42_kevin/gtk2-ex-xor/index.html>
+L<http://user42.tuxfamily.org/gtk2-ex-xor/index.html>
 
 =head1 LICENSE
 
