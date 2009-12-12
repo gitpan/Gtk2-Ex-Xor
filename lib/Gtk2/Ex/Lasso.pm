@@ -27,7 +27,7 @@ use Scalar::Util;
 use Gtk2 1.200;
 use Gtk2::Ex::Xor;
 
-our $VERSION = 7;
+our $VERSION = 8;
 
 # set this to 1 or 2 for some diagnostic prints
 use constant DEBUG => 0;
@@ -530,11 +530,13 @@ __END__
 
 Gtk2::Ex::Lasso -- drag the mouse to lasso a rectangular region
 
+=for test_synopsis my ($widget, $event)
+
 =head1 SYNOPSIS
 
  use Gtk2::Ex::Lasso;
  my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
- $lasso->signal_connect (ended => sub { ... });
+ $lasso->signal_connect (ended => sub { some_code() });
  $lasso->start ($event);
 
 =head1 OBJECT HIERARCHY

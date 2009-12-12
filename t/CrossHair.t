@@ -31,7 +31,7 @@ use MyTestHelpers;
 # SKIP: { eval 'use Test::NoWarnings; 1'
 #           or skip 'Test::NoWarnings not available', 1; }
 
-my $want_version = 7;
+my $want_version = 8;
 cmp_ok ($Gtk2::Ex::CrossHair::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::CrossHair->VERSION,  '>=', $want_version,
@@ -60,7 +60,7 @@ sub leftover_fields {
   my ($widget) = @_;
   my @leftover = grep /Gtk2::Ex::CrossHair/, keys %$widget;
 
-  #   if (my $connected = any_signal_connections ($widget)) {
+  #   if (my $connected = MyTestHelpers::any_signal_connections ($widget)) {
   #     push @leftover, "signal $connected";
   #   }
 

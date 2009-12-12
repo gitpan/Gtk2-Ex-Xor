@@ -22,10 +22,13 @@ use strict;
 use warnings;
 
 use base 'Exporter';
-our @EXPORT = qw(main_iterations
-                 warn_suppress_gtk_icon
-                 glib_gtk_versions
-                 any_signal_connections);
+use vars qw(@EXPORT_OK %EXPORT_TAGS);
+our @EXPORT_OK = qw(findrefs
+                    main_iterations
+                    warn_suppress_gtk_icon
+                    glib_gtk_versions
+                    any_signal_connections);
+our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 use constant DEBUG => 0;
 

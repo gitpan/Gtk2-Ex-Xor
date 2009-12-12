@@ -1,5 +1,5 @@
 This file contains message digests of all files listed in MANIFEST,
-signed via the Module::Signature module, version 0.55.
+signed via the Module::Signature module, version 0.61.
 
 To verify the content in this distribution, first make sure you have
 Module::Signature installed, then type:
@@ -14,16 +14,16 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 8624bcdae55baeef00cd11d5dfcfa60f68710a02 COPYING
-SHA1 7b741994f51a25258c7051a5052a2e6073393663 Changes
-SHA1 8793a64b501eabff7ef8e0e3b4c58179684bd0ec MANIFEST
-SHA1 13c1f4ba3cd5cd6a7fff24c88cb5453250289bdb MANIFEST.SKIP
-SHA1 e8624192ebe5420a98fe2a18d3f460e998128754 META.yml
-SHA1 609e77f40f9d3e5b5a689d9b918a650437ac6614 Makefile.PL
+SHA1 842745cb706f8f2126506f544492f7a80dbe29b3 COPYING
+SHA1 a504f9c214c92db1367d095e1b228e6447505c27 Changes
+SHA1 30df0bf62944f5ed171ad8fb77dfc23c39f74bcb MANIFEST
+SHA1 bb78fa7bf2dfebdda59c9efb64db51b173fb9e2f MANIFEST.SKIP
+SHA1 d3459703845863a82c43e8a7298c7041d14b029b META.yml
+SHA1 624871f8a4c7c05e554ac64359e6d471e2f01e5d Makefile.PL
 SHA1 17749d5b5fd52fa9378f9411fc6807e1db96ddce README
-SHA1 cc1ea65931bbc0b3b41fb03318acd4638f1a0fbf debian/changelog
+SHA1 7e31c7311019a1ba40d8227713c26771110160bd debian/changelog
 SHA1 ac3478d69a3c81fa62e60f5c3696165a4e5e6ac4 debian/compat
-SHA1 beae3a2adf05b8e33d3bc49e9c3f88e819a660e6 debian/control
+SHA1 0d984edee8bf65dc52b21b206a1dda67853043ef debian/control
 SHA1 4f84a00b3521efd6140436177bad749bb210388c debian/copyright
 SHA1 b21dd8f805f87ac933fba36dba6c87af0f54cd2a debian/rules
 SHA1 e4f8d0bdfd6e32e3f503951e4ea7a9bb6cb6beba debian/watch
@@ -46,22 +46,24 @@ SHA1 e077d6723d82b3a9a5a157ec4ed9429072e4f9d9 examples/cross-area.pl
 SHA1 1be1c897acdb72324d493055ffd302aa4ac4f1ea examples/cross-label.pl
 SHA1 8ab968354f448c8f2f203ee43dcdd8d53be55102 examples/cross-textview.pl
 SHA1 7696dfea430ede8e71fe38218f193dbad3fc7af6 examples/lasso-area.pl
-SHA1 acdaeb3b4615884f25cbb8e8127b39416326f961 inc/MyMakeMakerExtras.pm
+SHA1 fff676a9981e20e51d8987b36323b1227a5945ee inc/MyMakeMakerExtras.pm
 SHA1 ecc98dad6420731b5efd494a196e252e6280da1c junk/canvas.pl
-SHA1 fd3bf3825b62e6f38d8c2e60f9f770a32a244ef2 lib/Gtk2/Ex/CrossHair.pm
-SHA1 8314ad660dca13d081def62fec67fd7e209c800e lib/Gtk2/Ex/Lasso.pm
-SHA1 b00c0cd54d5ab23ebb2a768f0df3e1699c32a341 lib/Gtk2/Ex/Xor.pm
-SHA1 83baa00317b90a9bdd5da554e3d4a8a2c4272426 t/0-META-read.t
+SHA1 546b31e686e8e97d3d0bb7d77f9083e52399a4ff lib/Gtk2/Ex/CrossHair.pm
+SHA1 18f647f3230cc96ce2426717ede72fb8484422b3 lib/Gtk2/Ex/Lasso.pm
+SHA1 2cc9d7c844987b50f8a7d50d27029c4416a287dc lib/Gtk2/Ex/Xor.pm
+SHA1 378b932305fb60823467c2af3c771fe3fc295a13 t/0-META-read.t
 SHA1 a343ed4dce96d05de51eed1ec065911584b96fce t/0-Test-DistManifest.t
 SHA1 bba0dc087cbe64d8f100ab77e6cef061c0bebf27 t/0-Test-Pod.t
-SHA1 9934a78a7febbcdc51d488b4d80fdd011c5277db t/CrossHair.t
-SHA1 109f47728f87dadffa5288b945cd034fb78a6a22 t/Lasso.t
-SHA1 d7ad7a3276911164ccc9d988c04604bc149a3185 t/Xor.t
-SHA1 6d101ce65245026e5e29c641ecb247fc4f4f177b t/inc/MyTestHelpers.pm
+SHA1 5fa94e1e88e44064d1e6b21c88a4c9374a17bfd1 t/0-Test-Synopsis.t
+SHA1 d369522d8a9a887fdf1a1e14cb83e25fa2188727 t/0-Test-YAML-Meta.t
+SHA1 a88d48c3862f2f6b84744a2426a52a2ffd23c171 t/CrossHair.t
+SHA1 5f1da7c2d50507614ee392002e56a46e586becaf t/Lasso.t
+SHA1 d4505b19956207d086004c8ba47364b3635e3c2d t/Xor.t
+SHA1 7e65c1ad5410e42561d9864258715047b760a89a t/inc/MyTestHelpers.pm
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.10 (GNU/Linux)
 
-iD8DBQFKsDXCLFMCIV9q3ToRAjtQAKCYrOQjextFs8EaXJ/yhhv5HkAR4wCfb++Y
-O+7vnxyii6m9cTcQEGX7ydo=
-=chyx
+iD8DBQFLJA2ZLFMCIV9q3ToRAg9eAJ0bko3uIIoKSOdZvOXP1ZtNrVf/6ACeIcgM
+IcPIbwkXJHGQS19UbCp1JXE=
+=64ZC
 -----END PGP SIGNATURE-----

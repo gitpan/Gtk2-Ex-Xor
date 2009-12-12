@@ -38,6 +38,8 @@ SIGNATURE
 t/0-META-read.t
 t/0-Test-DistManifest.t
 t/0-Test-Pod.t
+t/0-Test-Synopsis.t
+t/0-Test-YAML-Meta.t
 t/CrossHair.t
 t/inc/MyTestHelpers.pm
 t/Lasso.t

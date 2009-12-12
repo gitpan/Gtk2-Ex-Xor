@@ -24,13 +24,14 @@ use ExtUtils::MakeMaker;
 use lib 'inc';
 use MyMakeMakerExtras;
 
-WriteMakefile
+MyMakeMakerExtras::WriteMakefile
   (NAME         => 'Gtk2-Ex-Xor',
    ABSTRACT     => 'Helpers for Gtk2 widgets.',
    VERSION_FROM => 'lib/Gtk2/Ex/Xor.pm',
    AUTHOR       => 'Kevin Ryde <user42@zip.com.au>',
    LICENSE      => 'gpl',
    SIGN         => 1,
+   MIN_PERL_VERSION => '5.008',
 
    PREREQ_PM    => {
                     # version 1.200 for Gtk2::GC auto-release and various
@@ -42,40 +43,29 @@ WriteMakefile
                     # my Gtk2-Ex-WidgetBits
                     'Gtk2::Ex::WidgetBits' => 0,
                     'Gtk2::Ex::KeySnooper' => 0,
-                    'Gtk2::Ex::SyncCall' => 0,
+                    # version 12 for gtk XID workaround
+                    'Gtk2::Ex::SyncCall' => 12,
 
                     # optional for Lasso but mandatory for CrossHair
                     # version 5 for weakening fixes
                     'Gtk2::Ex::WidgetCursor' => 5,
                    },
-   clean        => { FILES => "CrossHair.html Lasso.html Xor.html" },
 
-   EXTRA_META => MyMakeMakerExtras::strip_comments(<<'HERE'),
-optional_features:
-    maximum_tests:
-        description: Have "make test" do as much as possible.
-        requires:
-            Parse::CPAN::Meta: 0
-            Test::Pod: 1.00
-            Test::NoWarnings: 0
-            Test::DistManifest: 0
-            # Test::YAML::Meta: 0
-            YAML: 0
-            YAML::Syck: 0
-            YAML::Tiny: 0
-            YAML::XS: 0
-no_index:
-    package:
+
+   META_MERGE
+   => { resources
+        => { homepage => 'http://user42.tuxfamily.org/gtk2-ex-xor/index.html' },
+        optional_features
+        => { maximum_tests
+             => { description => 'Have "make test" do as much as possible.',
+                  requires => { 'Test::NoWarnings' => 0,
+                              },
+                },
+           },
+
         # use of "package Gtk2::Bin" adding a private method
-        - Gtk2::Bin
-    directory:
-        - devel
-        - inc
-        - t
-resources:
-    homepage: http://user42.tuxfamily.org/gtk2-ex-xor/index.html
-    license: http://www.gnu.org/licenses/gpl.html
-HERE
+        no_index => { package => [ 'Gtk2::Bin' ], },
+      },
   );
 
 #------------------------------------------------------------------------------

@@ -29,7 +29,7 @@ use Glib::Ex::SignalIds;
 use Gtk2::Ex::Xor;
 use Gtk2::Ex::WidgetBits;
 
-our $VERSION = 7;
+our $VERSION = 8;
 
 # set this to 1 for some diagnostic prints
 use constant DEBUG => 0;
@@ -419,6 +419,7 @@ sub _do_button_release {
 
 sub _maybe_move {
   my ($self, $widget, $root_x, $root_y) = @_;
+  if (DEBUG) { print "  _maybe_move $widget $root_x,$root_y\n"; }
 
   $self->{'xy_widget'} = $widget;
   $self->{'root_x'} = $root_x;
@@ -426,6 +427,7 @@ sub _maybe_move {
 
   $self->{'sync_call'} ||= do {
     require Gtk2::Ex::SyncCall;
+    if (DEBUG) { print "  new sync on ",$self->{'widgets'}->[0],"\n"; }
     Gtk2::Ex::SyncCall->sync ($self->{'widgets'}->[0],
                               \&_sync_call_handler,
                               Gtk2::Ex::Xor::_ref_weak ($self));
@@ -687,11 +689,13 @@ __END__
 
 Gtk2::Ex::CrossHair -- crosshair lines drawn following the mouse
 
+=for test_synopsis my ($w1, $w2, $event)
+
 =head1 SYNOPSIS
 
  use Gtk2::Ex::CrossHair;
  my $crosshair = Gtk2::Ex::CrossHair->new (widgets => [$w1,$w2]);
- $crosshair->signal_connect (moved => sub { ... });
+ $crosshair->signal_connect (moved => sub { print_pos() });
 
  $crosshair->start ($event);
  $crosshair->end ();

@@ -17,6 +17,9 @@ along with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
+Version 8, December 2009
+    - depend on Gtk2::Ex::SyncCall 12 for gtk XID workaround
+
 Version 7,  September 2009
     - CrossHair allow widgets in different toplevels of same screen
 
