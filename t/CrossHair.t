@@ -1,6 +1,6 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
-# Copyright 2008, 2009 Kevin Ryde
+# Copyright 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -20,18 +20,19 @@
 
 use strict;
 use warnings;
-use Gtk2::Ex::CrossHair;
-use Test::More tests => 15;
+use Test::More tests => 16;
 
-use FindBin;
-use File::Spec;
-use lib File::Spec->catdir($FindBin::Bin,'inc');
+use lib 't';
 use MyTestHelpers;
 
-# SKIP: { eval 'use Test::NoWarnings; 1'
-#           or skip 'Test::NoWarnings not available', 1; }
+BEGIN {
+ SKIP: { eval 'use Test::NoWarnings; 1'
+           or skip 'Test::NoWarnings not available', 1; }
+}
 
-my $want_version = 8;
+require Gtk2::Ex::CrossHair;
+
+my $want_version = 9;
 cmp_ok ($Gtk2::Ex::CrossHair::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::CrossHair->VERSION,  '>=', $want_version,
@@ -44,7 +45,7 @@ cmp_ok (Gtk2::Ex::CrossHair->VERSION,  '>=', $want_version,
 }
 {
   my $cross = Gtk2::Ex::CrossHair->new;
-  ok ($cross->VERSION  >= $want_version, 'VERSION objectmethod');
+  cmp_ok ($cross->VERSION, '>=', $want_version, 'VERSION objectmethod');
   ok (eval { $cross->VERSION($want_version); 1 },
       "VERSION object check $want_version");
   my $check_version = $want_version + 1000;
@@ -67,7 +68,7 @@ sub leftover_fields {
   if (@leftover) {
     my %leftover;
     @leftover{@leftover} = @{$widget}{@leftover}; # hash slice
-    diag "leftover fields: ", explain \%leftover;
+    diag "leftover fields: ", keys %leftover;
   }
   return \@leftover;
 }
@@ -77,7 +78,7 @@ sub show_wait {
   my ($t_id, $s_id);
   $t_id = Glib::Timeout->add (10_000, # 10 seconds
                               sub {
-                                diag "Timeout waiting for map event\n";
+                                diag "Timeout waiting for map event";
                                 exit 1;
                               });
   $s_id = $widget->signal_connect (map_event => sub {
@@ -107,7 +108,7 @@ SKIP: {
     Scalar::Util::weaken ($weak_cross);
     undef $cross;
     is ($weak_cross, undef, 'weaken empty - destroyed');
-    diag explain $weak_cross;
+    if (defined &explain) { diag explain $weak_cross; }
     if ($weak_cross) { MyTestHelpers::findrefs ($weak_cross); }
   }
 
@@ -121,8 +122,10 @@ SKIP: {
     undef $cross;
     MyTestHelpers::main_iterations();
     is ($weak_cross, undef, 'weaken unrealized - destroyed');
-    diag explain $widget;
-    diag explain $weak_cross;
+    if (defined &explain) {
+      diag explain $widget;
+      diag explain $weak_cross;
+    }
     if ($weak_cross) {
       MyTestHelpers::findrefs ($weak_cross);
     }
@@ -172,7 +175,7 @@ SKIP: {
     MyTestHelpers::main_iterations();
     is ($weak_cross, undef, 'weaken active - destroyed');
     if ($weak_cross) {
-      diag explain $weak_cross;
+      if (defined &explain) { diag explain $weak_cross; }
       MyTestHelpers::findrefs ($weak_cross);
     }
     is_deeply (leftover_fields($widget), [],
@@ -195,7 +198,7 @@ SKIP: {
     $widget->destroy;
   }
 
-  # end() emits "notify::active"
+  # end()emits "notify::active"
   {
     my $widget = Gtk2::Window->new ('toplevel');
     $widget->realize;
@@ -235,7 +238,9 @@ SKIP: {
     $display->sync;
     MyTestHelpers::main_iterations();
 
-    diag explain $widget;
+    if (defined &explain) {
+      diag explain $widget;
+    }
     is_deeply (leftover_fields($widget), [],
                'change widget - no CrossHair data left behind');
 

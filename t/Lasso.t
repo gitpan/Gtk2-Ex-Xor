@@ -1,6 +1,6 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
-# Copyright 2008, 2009 Kevin Ryde
+# Copyright 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -20,18 +20,19 @@
 
 use strict;
 use warnings;
-use Gtk2::Ex::Lasso;
 use Test::More tests => 14;
 
-use FindBin;
-use File::Spec;
-use lib File::Spec->catdir($FindBin::Bin,'inc');
+use lib 't';
 use MyTestHelpers;
 
-SKIP: { eval 'use Test::NoWarnings; 1'
-          or skip 'Test::NoWarnings not available', 1; }
+BEGIN {
+ SKIP: { eval 'use Test::NoWarnings; 1'
+           or skip 'Test::NoWarnings not available', 1; }
+}
 
-my $want_version = 8;
+require Gtk2::Ex::Lasso;
+
+my $want_version = 9;
 cmp_ok ($Gtk2::Ex::Lasso::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::Lasso->VERSION,  '>=', $want_version,
@@ -44,7 +45,7 @@ cmp_ok (Gtk2::Ex::Lasso->VERSION,  '>=', $want_version,
 }
 {
   my $lasso = Gtk2::Ex::Lasso->new;
-  ok ($lasso->VERSION  >= $want_version, 'VERSION objectmethod');
+  cmp_ok ($lasso->VERSION, '>=', $want_version, 'VERSION objectmethod');
   ok (eval { $lasso->VERSION($want_version); 1 },
       "VERSION object check $want_version");
   my $check_version = $want_version + 1000;
@@ -58,7 +59,7 @@ MyTestHelpers::glib_gtk_versions();
 sub show_wait {
   my ($widget) = @_;
   my $t_id = Glib::Timeout->add (10_000, sub {
-                                   diag "Timeout waiting for map event\n";
+                                   diag "Timeout waiting for map event";
                                    exit 1;
                                  });
   my $s_id = $widget->signal_connect (map_event => sub {

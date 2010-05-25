@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright 2007, 2008, 2009 Kevin Ryde
+# Copyright 2007, 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -36,6 +36,7 @@ MyMakeMakerExtras::WriteMakefile
    PREREQ_PM    => {
                     # version 1.200 for Gtk2::GC auto-release and various
                     'Gtk2' => '1.200',
+                    'Glib::Object::Subclass' => 0,
 
                     # my Glib-Ex-ObjectBits
                     'Glib::Ex::SignalIds' => 0,
@@ -49,6 +50,9 @@ MyMakeMakerExtras::WriteMakefile
                     # optional for Lasso but mandatory for CrossHair
                     # version 5 for weakening fixes
                     'Gtk2::Ex::WidgetCursor' => 5,
+
+                    # 1.18 for pure-perl refaddr() fix
+                    'Scalar::Util' => 1.18,
                    },
 
 
@@ -61,6 +65,15 @@ MyMakeMakerExtras::WriteMakefile
                   requires => { 'Test::NoWarnings' => 0,
                               },
                 },
+             maximum_devel
+             => { description => 'Stuff used variously for development.',
+                  requires => { 'Gtk2::Ex::Dragger'    => 0,
+                                'Gtk2::Ex::TickerView' => 0,
+                                'Devel::FindRef'       => 0,
+                                'Devel::StackTrace'    => '1.19',
+                                'Goo::Canvas'          => 0,
+                                'Gnome2::Canvas'       => 0,
+                              } },
            },
 
         # use of "package Gtk2::Bin" adding a private method

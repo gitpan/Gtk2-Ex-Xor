@@ -1,6 +1,6 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
-# Copyright 2008, 2009 Kevin Ryde
+# Copyright 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -20,18 +20,19 @@
 
 use strict;
 use warnings;
-use Gtk2::Ex::Xor;
 use Test::More tests => 8;
 
-use FindBin;
-use File::Spec;
-use lib File::Spec->catdir($FindBin::Bin,'inc');
+use lib 't';
 use MyTestHelpers;
 
+BEGIN {
 SKIP: { eval 'use Test::NoWarnings; 1'
           or skip 'Test::NoWarnings not available', 1; }
+}
 
-my $want_version = 8;
+require Gtk2::Ex::Xor;
+
+my $want_version = 9;
 cmp_ok ($Gtk2::Ex::Xor::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::Xor->VERSION,  '>=', $want_version,

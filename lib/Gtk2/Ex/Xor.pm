@@ -1,4 +1,4 @@
-# Copyright 2007, 2008, 2009 Kevin Ryde
+# Copyright 2007, 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -22,11 +22,10 @@ use warnings;
 use Carp;
 use Gtk2;
 
-# set this to 1 for some diagnostic prints
-use constant DEBUG => 0;
+# uncomment this to run the ### lines
+#use Smart::Comments;
 
-our $VERSION = 8;
-
+our $VERSION = 9;
 
 sub get_gc {
   my ($widget, $fg_color, @params) = @_;
@@ -55,9 +54,7 @@ sub get_gc {
     $colormap->rgb_find_color ($fg_color);
   }
 
-  if (DEBUG) { printf "    pixels fg %#x bg %#x xor %#x\n",
-                 $fg_color->pixel, $xor_bg_color->pixel,
-                   $fg_color->pixel ^ $xor_bg_color->pixel ; }
+  ### pixels: sprintf "fg %#x bg %#x xor %#x\n", $fg_color->pixel, $xor_bg_color->pixel, $fg_color->pixel ^ $xor_bg_color->pixel
   my $xor_color = Gtk2::Gdk::Color->new
     (0,0,0, $fg_color->pixel ^ $xor_bg_color->pixel);
 
@@ -87,7 +84,7 @@ sub _event_widget_coords {
   my $eventwin = $event->window;
   if ($eventwin != $widget->window) {
     my ($wx, $wy) = $eventwin->get_position;
-    if (DEBUG) { print "  subwindow offset $wx,$wy\n"; }
+    ### subwindow offset: "$wx,$wy"
     $x += $wx;
     $y += $wy;
   }
@@ -269,7 +266,7 @@ L<http://user42.tuxfamily.org/gtk2-ex-xor/index.html>
 
 =head1 LICENSE
 
-Copyright 2007, 2008, 2009 Kevin Ryde
+Copyright 2007, 2008, 2009, 2010 Kevin Ryde
 
 Gtk2-Ex-Xor is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free

@@ -1,4 +1,4 @@
-# Copyright 2007, 2008, 2009 Kevin Ryde
+# Copyright 2007, 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -27,11 +27,10 @@ use Scalar::Util;
 use Gtk2 1.200;
 use Gtk2::Ex::Xor;
 
-our $VERSION = 8;
+# uncomment this to run the ### lines
+#use Smart::Comments;
 
-# set this to 1 or 2 for some diagnostic prints
-use constant DEBUG => 0;
-
+our $VERSION = 9;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
@@ -152,7 +151,7 @@ sub _do_style_set {
 sub start {
   my ($self, $event) = @_;
   my $widget = $self->{'widget'} || croak 'Lasso has no widget';
-  if (DEBUG) { print "Lasso start\n"; }
+  ### Lasso start()
 
   my $window = $widget->Gtk2_Ex_Xor_window
     || croak 'Lasso->start(): unrealized widget not (yet) supported';
@@ -160,7 +159,7 @@ sub start {
   my $want_grab = 1;
   $self->{'button'} = 0;
   if (Scalar::Util::blessed($event) && $event->can('button')) {
-    if (DEBUG) { print "  button ",$event->button,"\n"; }
+    ### button: $event->button
     $self->{'button'} = $event->button;
 
     # Passive grab from the button is enough, so normally $want_grab false
@@ -176,7 +175,7 @@ sub start {
        undef,  # no confine window
        undef,  # cursor
        _event_time($event));
-    if (DEBUG) { print "  pointer_grab $status\n"; }
+    ### pointer_grab: $status
     if ($status eq 'success') {
       $self->{'grabbed'} = 1;
     } else {
@@ -185,7 +184,7 @@ sub start {
   }
 
   if ($self->{'active'}) {
-    if (DEBUG) { print "  already active\n"; }
+    ### already active
     return;
   }
 
@@ -221,7 +220,7 @@ sub start {
   my ($x, $y) = (Scalar::Util::blessed($event) && $event->can('x')
                  ? Gtk2::Ex::Xor::_event_widget_coords ($widget, $event)
                  : $widget->get_pointer);
-  if (DEBUG) { print "  initial $x,$y\n"; }
+  ### initial "$x,$y"
 
   $self->{'x1'} = $x+1; # always initial "moved" emission
   $self->{'y1'} = $y;
@@ -250,8 +249,7 @@ sub end {
 
 sub abort {
   my ($self, $event) = @_;
-  if (DEBUG) { print "Lasso abort ",
-                 ($self->{'active'}?" (already inactive)":""),"\n"; }
+  ### Lasso abort(): $self->{'active'}
   if (! $self->{'active'}) { return; }
   _end ($self, $event);
   $self->notify ('active');
@@ -265,12 +263,12 @@ sub _end {
   _update_widgetcursor ($self);
 
   if ($self->{'drawn'}) {
-    if (DEBUG) { print "  undraw\n"; }
+    ### undraw
     _draw ($self);
     $self->{'drawn'} = 0;
   }
   if (delete $self->{'grabbed'}) {
-    if (DEBUG) { print "  ungrab\n"; }
+    ### ungrab
     Gtk2::Gdk->pointer_ungrab (_event_time ($event));
   }
 }
@@ -297,8 +295,7 @@ sub _update_widgetcursor {
 sub _do_expose {
   my ($widget, $event, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
-  if (DEBUG) { print "lasso expose $widget, active=",
-                 $self->{'active'}||0,"\n"; }
+  ### lasso _do_expose() "$widget", active=" . ($self->{'active'}||0)
   if ($self->{'drawn'}) {
     _draw ($self, $event->region);
   }
@@ -342,8 +339,8 @@ sub _do_size_allocate {
 sub _do_button_release {
   my ($widget, $event, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
-  if (DEBUG) { print "Lasso button release, got ", $event->button,
-                 " want ", $self->{'button'}, "\n"; }
+  ### Lasso _do_button_release(): $event->button
+  ### want: $self->{'button'}
   if ($event->button == $self->{'button'}) {
     $self->end ($event);
   }
@@ -382,7 +379,7 @@ sub _sync_call_handler {
   if (! $self->{'active'}) { return; }
 
   if ($self->{'drawn'}) {
-    if (DEBUG >= 2) { print "  undraw\n"; }
+    #### undraw
     _draw ($self);
   }
   $self->{'x1'} = $self->{'pending_x1'};
@@ -397,7 +394,7 @@ sub _sync_call_handler {
 
 sub _draw {
   my ($self, $clip_region) = @_;
-  if (DEBUG >= 2) { print "   _draw  ",$clip_region||'noclip',"\n"; }
+  #### _draw: $clip_region
   my $widget = $self->{'widget'};
 
   my $win = $widget->Gtk2_Ex_Xor_window
@@ -438,11 +435,9 @@ sub swap_corners {
 sub _do_key_snooper {
   my ($target_widget, $event, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
-
   # ignore key releases
   $event->type eq 'key-press' || return 0; # Gtk2::EVENT_PROPAGATE
-
-  if (DEBUG) { print "Lasso key ", $event->keyval, "\n"; }
+  ### Lasso _do_key_snooper(): $event->keyval
 
   if ($event->keyval == Gtk2::Gdk->keyval_from_name('Escape')) {
     $self->abort;
@@ -463,7 +458,7 @@ sub _do_key_snooper {
 sub _do_grab_broken {
   my ($widget, $event, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
-  if (DEBUG) { print "Lasso grab broken\n"; }
+  ### Lasso _do_grab_broken()
 
   $self->{'grabbed'} = 0;
 
@@ -488,7 +483,7 @@ sub _do_grab_broken {
 # Draw a rectangle with corners at $x1,$y1 and $x2,$y2.
 sub _draw_rectangle_corners {
   my ($drawable, $gc, $filled, $x1,$y1, $x2,$y2) = @_;
-  if (DEBUG >= 2) { print "  draw rect $x1,$y1 - $x2,$y2\n"; }
+  #### draw rect: "$x1,$y1 - $x2,$y2"
   $drawable->draw_rectangle ($gc, $filled,
                              min ($x1, $x2), min ($y1, $y2),
                              abs ($x1 - $x2) + ($filled ? 1 : 0),
@@ -712,7 +707,7 @@ L<http://user42.tuxfamily.org/gtk2-ex-xor/index.html>
 
 =head1 LICENSE
 
-Copyright 2007, 2008, 2009 Kevin Ryde
+Copyright 2007, 2008, 2009, 2010 Kevin Ryde
 
 Gtk2-Ex-Xor is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free

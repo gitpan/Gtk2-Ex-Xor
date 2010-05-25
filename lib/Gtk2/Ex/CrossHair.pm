@@ -1,4 +1,4 @@
-# Copyright 2007, 2008, 2009 Kevin Ryde
+# Copyright 2007, 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -21,6 +21,7 @@ use strict;
 use warnings;
 use Carp;
 use List::Util;
+use Scalar::Util 1.18 'refaddr'; # 1.18 for pure-perl refaddr() fix
 use POSIX ();
 
 # 1.200 for Gtk2::GC auto-release
@@ -29,10 +30,10 @@ use Glib::Ex::SignalIds;
 use Gtk2::Ex::Xor;
 use Gtk2::Ex::WidgetBits;
 
-our $VERSION = 8;
+# uncomment this to run the ### lines
+#use Smart::Comments;
 
-# set this to 1 for some diagnostic prints
-use constant DEBUG => 0;
+our $VERSION = 9;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
@@ -133,7 +134,7 @@ sub INIT_INSTANCE {
 
 sub FINALIZE_INSTANCE {
   my ($self) = @_;
-  if (DEBUG) { print "CrossHair finalize\n"; }
+  ### CrossHair finalize
   $self->end;
 }
 
@@ -143,7 +144,8 @@ sub _pw_list {
 }
 sub _pw {
   my ($self, $widget) = @_;
-  return $self->{'perwidget'}->{$widget+0};
+  ### _pw: "@{[$widget||'[undef]']}"
+  return $self->{'perwidget'}->{refaddr($widget)};
 }
 
 sub GET_PROPERTY {
@@ -163,8 +165,7 @@ sub SET_PROPERTY {
   my ($self, $pspec, $newval) = @_;
   my $pname = $pspec->get_name;
   my $oldval = $self->{$pname};
-  if (DEBUG) { print "CrossHair set '$pname' ",
-                 defined $newval ? $newval : 'undef',"\n"; }
+  ### CrossHair SET_PROPERTY: $pname, $newval
 
   if ($pname eq 'widget') {
     $pname = 'widgets';
@@ -174,17 +175,29 @@ sub SET_PROPERTY {
 
   if ($pname eq 'widgets') {
     my $widgets = $newval;
-    my %perwidget;
+
+    _undraw ($self);
+    my %new_perwidget;
     foreach my $widget (@$widgets) {
-      $perwidget{$widget+0} = _pw($self,$widget) || _pw_new($self,$widget);
+      $new_perwidget{refaddr($widget)}
+        = _pw($self,$widget) || _pw_new($self,$widget);
     }
-    $self->{'perwidget'} = \%perwidget;
-    if (my $xy_widget = $self->{'xy_widget'}) {
-      if (! _pw($xy_widget)) {
-        # xy_widget removed from widgets
-        _maybe_move ($self, undef, undef, undef);
+    $self->{'perwidget'} = \%new_perwidget;  # discards pw's of old widgets
+    $self->{$pname} = $newval;  # per default GET_PROPERTY
+
+    my $xy_widget = $self->{'xy_widget'};
+    my $root_x = $self->{'root_x'};
+    my $root_y = $self->{'root_y'};
+    if ($xy_widget && ! _pw($self,$xy_widget)) {
+      ### xy_widget removed
+      unless ($self->{'xy_widget'} = $xy_widget = List::Util::first
+              {_widget_contains_root_xy ($_, $root_x, $root_y)} @$widgets) {
+        # no drawing when not in any widget, per _do_leave_notify()
+        undef $root_x;
+        undef $root_y;
       }
     }
+    _maybe_move ($self, $xy_widget, $root_x, $root_y);
     _wcursor_update ($self); # new widget set
 
   } elsif ($pname eq 'active') {
@@ -247,7 +260,7 @@ sub _pw_new {
 
 sub start {
   my ($self, $event) = @_;
-  if (DEBUG) { print "CrossHair start\n"; }
+  ### CrossHair start()
 
   my $button = $self->{'button'} = (ref $event && $event->can('button')
                                     ? $event->button : 0);
@@ -266,14 +279,12 @@ sub start {
   } else {
     foreach my $widget (@$widgets) {
       my $root_window = $widget->get_root_window || next;
-      if (DEBUG) { print "  root_window $root_window\n"; }
+      ### root_window: "$root_window"
       (undef, $root_x, $root_y) = $root_window->get_pointer;
       last;
     }
   }
-  if (DEBUG) { print "  root_x,y = ",
-                 (defined $root_x ? $root_x : 'undef'), ",",
-                   (defined $root_y ? $root_y : 'undef'), "\n"; }
+  ### root x,y: $root_x, $root_y
 
   my $xy_widget;
   if ($button) {
@@ -308,6 +319,7 @@ sub start {
 
 sub _wcursor_update {
   my ($self) = @_;
+  ### CrossHair _wcursor_update()
   $self->{'wcursor'} = $self->{'active'} && do {
     require Gtk2::Ex::WidgetCursor;
     Gtk2::Ex::WidgetCursor->new
@@ -357,8 +369,7 @@ sub end {
 # 'motion-notify-event' on a target widget
 sub _do_motion_notify {
   my ($widget, $event, $ref_weak_self) = @_;
-  if (DEBUG) { print "crosshair motion $widget ",
-                 $event->x_root, ",", $event->y_root, "\n"; }
+  ### CrossHair _do_motion_notify(): "$widget " . $event->x_root . "," . $event->y_root
   if (my $self = $$ref_weak_self) {
     if ($self->{'active'}) {
       _maybe_move ($self, $widget, _event_root_coords ($event));
@@ -371,7 +382,7 @@ sub _do_motion_notify {
 sub _do_size_allocate {
   my ($widget, $alloc, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return;
-  if (DEBUG) { print "CrossHair size_allocate $widget\n"; }
+  ### CrossHair _do_size_allocate: "$widget"
 
   # if the widget position has changed then must draw lines at new spots
   _undraw ($self, [$widget]);
@@ -381,8 +392,7 @@ sub _do_size_allocate {
 # 'enter-notify-event' signal on the widgets
 sub _do_enter_notify {
   my ($widget, $event, $ref_weak_self) = @_;
-  if (DEBUG) { print "CrossHair enter $widget ",
-                 $event->x_root, ",", $event->y_root, "\n"; }
+  ### CrossHair _do_enter_notify(): "$widget " . $event->x_root . "," . $event->y_root
   if (my $self = $$ref_weak_self) {
     if (! $self->{'button'}) {
       # not button drag mode
@@ -395,8 +405,7 @@ sub _do_enter_notify {
 # 'leave-notify-event' signal on the widgets
 sub _do_leave_notify {
   my ($widget, $event, $ref_weak_self) = @_;
-  if (DEBUG) { print "CrossHair leave $widget ",
-                 $event->x_root, ",", $event->y_root, "\n"; }
+  ### CrossHair _do_leave_notify(): "$widget " . $event->x_root . "," . $event->y_root
   if (my $self = $$ref_weak_self) {
     if (! $self->{'button'}) {
       # not button drag mode
@@ -419,7 +428,7 @@ sub _do_button_release {
 
 sub _maybe_move {
   my ($self, $widget, $root_x, $root_y) = @_;
-  if (DEBUG) { print "  _maybe_move $widget $root_x,$root_y\n"; }
+  #### _maybe_move: "@{[$widget||'[undef]']}", $root_x, $root_y
 
   $self->{'xy_widget'} = $widget;
   $self->{'root_x'} = $root_x;
@@ -427,16 +436,21 @@ sub _maybe_move {
 
   $self->{'sync_call'} ||= do {
     require Gtk2::Ex::SyncCall;
-    if (DEBUG) { print "  new sync on ",$self->{'widgets'}->[0],"\n"; }
-    Gtk2::Ex::SyncCall->sync ($self->{'widgets'}->[0],
-                              \&_sync_call_handler,
-                              Gtk2::Ex::Xor::_ref_weak ($self));
+    ### new SyncCall on: "$self->{'widgets'}->[0]"
+    if (my $widget = List::Util::first {$_->realized} @{$self->{'widgets'}}) {
+      Gtk2::Ex::SyncCall->sync ($widget,
+                                \&_sync_call_handler,
+                                Gtk2::Ex::Xor::_ref_weak ($self));
+    } else {
+      $self->signal_emit ('moved', undef, undef, undef);
+      undef;
+    }
   };
 }
 sub _sync_call_handler {
   my ($ref_weak_self) = @_;
   my $self = $$ref_weak_self || return;
-  if (DEBUG) { print "CrossHair sync_call\n"; }
+  ### CrossHair _sync_call_handler()
 
   $self->{'sync_call'} = undef;
   if (! $self->{'active'}) { return; }  # turned off before sync returned
@@ -453,7 +467,7 @@ sub _sync_call_handler {
 
 sub _do_expose_event {
   my ($widget, $event, $ref_weak_self) = @_;
-  if (DEBUG) { print "CrossHair expose $widget\n"; }
+  ### CrossHair _do_expose_event()
   if (my $self = $$ref_weak_self) {
     _draw ($self, [$widget], $event->region);
   }
@@ -461,14 +475,15 @@ sub _do_expose_event {
 }
 
 sub _undraw {
-  my ($self) = @_;
-  my $widgets = $self->{'widgets'};
-  foreach my $widget (@$widgets) {
-    my $pw = _pw($self,$widget);
-    if (exists $pw->{'x'}) {
-      _draw ($self, [$widget]);
-      delete $pw->{'x'};  # position undetermined as well as undrawn
-    }
+  my ($self, $widgets) = @_;
+  $widgets ||= $self->{'widgets'};
+  ### _undraw(): "@$widgets"
+
+  my @widgets = grep { exists _pw($self,$_)->{'x'} } @$widgets;
+  _draw ($self, \@widgets);
+  foreach my $widget (@widgets) {
+    # position undetermined as well as undrawn
+    delete _pw($self,$widget)->{'x'};
   }
 }
 
@@ -481,21 +496,17 @@ sub _draw {
   my $root_y = $self->{'root_y'};
 
   foreach my $widget (@$widgets) {
-    if (DEBUG) { print "  _draw $widget\n"; }
+    ### _draw(): "$widget"
     my $pw = _pw($self,$widget);
     my $win = $widget->Gtk2_Ex_Xor_window || next; # perhaps unrealized
 
     if (! exists $pw->{'x'}) {
-      if (DEBUG) { print "  establish draw position $widget ",
-                     (defined $root_x ? $root_x : 'undef'),",",
-                       (defined $root_y ? $root_y : 'undef'),"\n"; }
+      ### establish draw position: "$widget", $root_x, $root_y
       @{$pw}{'x','y'}
         = (defined $root_x
            ? _translate_coordinates_root_to_widget ($widget, $root_x, $root_y)
            : ());
-      if (DEBUG) { print "    at ",
-                     (defined $pw->{'x'} ? $pw->{'x'} : 'undef'),",",
-                       (defined $pw->{'y'} ? $pw->{'y'} : 'undef'),"\n"; }
+      ### at: $pw->{'x'}, $pw->{'y'}
     }
 
     my $x = $pw->{'x'};
@@ -503,7 +514,7 @@ sub _draw {
     my $y = $pw->{'y'};
 
     my $gc = ($pw->{'gc'} ||= do {
-      if (DEBUG) { print "  create gc\n"; }
+      ### create gc
       Gtk2::Ex::Xor::get_gc ($widget, $self->{'foreground'},
                              line_width => ($self->{'line_width'} || 0),
                              line_style => ($self->{'line_style'}
@@ -517,7 +528,7 @@ sub _draw {
       # if the operative Gtk2_Ex_Xor_window is not the main widget window,
       # then adjust from widget coordinates to the $win subwindow
       my ($wx, $wy) = $win->get_position;
-      if (DEBUG) { print "  subwindow offset $wx,$wy\n"; }
+      ### subwindow offset: "$wx,$wy"
       $x -= $wx;
       $y -= $wy;
     }
@@ -556,7 +567,7 @@ sub _draw {
 # just refresh the gc.
 sub _do_style_set {
   my ($widget, $prev_style, $ref_weak_self) = @_;
-  if (DEBUG) { print "style_set $widget\n"; }
+  ### CrossHair _do_style_set: "$widget"
   my $self = $$ref_weak_self || return;
   delete _pw($self,$widget)->{'gc'}; # possible new colour
 }
@@ -583,12 +594,14 @@ sub _event_root_coords {
 
 # Return true if $x,$y in root window coordinates is within $widget's
 # allocated rectangle.
+# FIXME: Would like to exclude parts of $widget which are overlapped by
+# other widgets and/or windows.
 #
 sub _widget_contains_root_xy {
   my ($widget, $root_x, $root_y) = @_;
-  return _widget_contains_xy
-    ($widget,
-     _translate_coordinates_root_to_widget ($widget, $root_x, $root_y));
+  my ($wx, $wy) = _translate_coordinates_root_to_widget ($widget, $root_x, $root_y)
+    or return 0;  # $widget unrealized
+  return _widget_contains_xy ($widget, $wx, $wy);
 }
 
 # Return true if $x,$y in widget coordinates is within $widget's allocated
@@ -597,6 +610,7 @@ sub _widget_contains_root_xy {
 #
 sub _widget_contains_xy {
   my ($widget, $x, $y) = @_;
+  ### _widget_contains_xy(): $x,$y
   return ($x >= 0 && $y >= 0
           && do {
             my $alloc = $widget->allocation;
@@ -605,9 +619,11 @@ sub _widget_contains_xy {
 
 sub _translate_coordinates_root_to_widget {
   my ($widget, $root_x, $root_y) = @_;
+  ### _translate_coordinates_root_to_widget(): "$widget", $root_x, $root_y
   my ($x, $y) = Gtk2::Ex::WidgetBits::get_root_position ($widget);
   if (! defined $x) {
-    return;  # if $widget unrealized
+    ### widget unrealized
+    return;
   } else {
     return ($root_x - $x, $root_y - $y);
   }
@@ -729,17 +745,17 @@ intended as a visual guide for the user.
         |         |       |
         +-----------------+
 
-The idea is to see relative positions.  For example in a graph the
+The idea is to help see relative positions.  For example in a graph the
 horizontal line helps you see which of two peaks is the higher, and the
-vertical line can extend down to (or into) an X axis scale to help see where
+vertical line can extend down to (or into) an X axis scale to see where
 exactly a particular part of the graph lies.
 
 The C<moved> callback lets you update a text status line with a position in
-figures, etc (if you don't display something like that already, following
-the mouse all the time).
+figures, etc (if you don't display something like that following the mouse
+all the time).
 
 While the crosshair is active the mouse cursor is set invisible in the
-target windows, since the cross is enough feedback and a cursor tends to
+target windows since the cross is enough feedback and a cursor tends to
 obscure the lines.  This is done with the WidgetCursor mechanism (see
 L<Gtk2::Ex::WidgetCursor>) and so cooperates with other widget or
 application uses of that.
@@ -856,6 +872,11 @@ immediately, leaving the drawn crosshair away from the mouse.  The next
 mouse movement updates all widgets though, and often parent widget moves
 provoke a redraw which will update the crosshair too.
 
+If a crosshair window is partly overlapped by another window then a keyboard
+mode start with the pointer in that other window isn't recognised as outside
+the crosshair window.  This results in an initial draw but then no updating
+until the pointer moves into the crosshaired window.
+
 =head1 SEE ALSO
 
 L<Gtk2::Ex::Lasso>, L<Gtk2::Ex::Xor>, L<Glib::Object>,
@@ -867,7 +888,7 @@ L<http://user42.tuxfamily.org/gtk2-ex-xor/index.html>
 
 =head1 LICENSE
 
-Copyright 2007, 2008, 2009 Kevin Ryde
+Copyright 2007, 2008, 2009, 2010 Kevin Ryde
 
 Gtk2-Ex-Xor is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
