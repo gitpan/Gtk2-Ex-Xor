@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Gtk2-Ex-Xor
-version:            9
+version:            10
 abstract:           Helpers for Gtk2 widgets.
 author:
     - Kevin Ryde <user42@zip.com.au>
@@ -55,7 +55,7 @@ optional_features:
             Test::NoWarnings:    0
             Test::Pod:           1.00
             Test::Synopsis:      0
-            Test::YAML::Meta:    0.13
+            Test::YAML::Meta:    0.15
             YAML:                0
             YAML::Syck:          0
             YAML::Tiny:          0

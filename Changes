@@ -17,6 +17,9 @@ along with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
+Version 10, May 2010
+    - CrossHair when setting 'widgets' notify 'widget' property too
+
 Version 9, May 2010
     - CrossHair undraw when removing a widget while active
     - CrossHair refaddr() for widget indexing, just in case numize overload

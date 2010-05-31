@@ -25,7 +25,7 @@ use Gtk2;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 9;
+our $VERSION = 10;
 
 sub get_gc {
   my ($widget, $fg_color, @params) = @_;
@@ -140,25 +140,23 @@ sub Gtk2::Entry::Gtk2_Ex_Xor_background_from_style {
 # child is what will be xored over.
 #
 # Perhaps this should be only some of the Bin classes, like Gtk2::Window,
-# EventBox and Alignment.
-#
-package Gtk2::Bin;
-use strict;
-use warnings;
-sub Gtk2_Ex_Xor_background {
-  my ($widget) = @_;
-  # same override as above ...
-  if (exists $widget->{'Gtk2_Ex_Xor_background'}) {
-    return $widget->{'Gtk2_Ex_Xor_background'};
-  }
-  if (my $child = $widget->get_child) {
-    if ($child->flags & 'no-window') {
-      return $child->Gtk2_Ex_Xor_background;
+# Gtk2::EventBox and Gtk2::Alignment.
+{
+  package Gtk2::Bin;
+  sub Gtk2_Ex_Xor_background {
+    my ($widget) = @_;
+    # same override as above ...
+    if (exists $widget->{'Gtk2_Ex_Xor_background'}) {
+      return $widget->{'Gtk2_Ex_Xor_background'};
     }
+    if (my $child = $widget->get_child) {
+      if ($child->flags & 'no-window') {
+        return $child->Gtk2_Ex_Xor_background;
+      }
+    }
+    return $widget->SUPER::Gtk2_Ex_Xor_background;
   }
-  return $widget->SUPER::Gtk2_Ex_Xor_background;
 }
-package Gtk2::Ex::Xor;
 
 
 #------------------------------------------------------------------------------
@@ -248,11 +246,11 @@ C<Goo::Canvas>.
 =item *
 
 The SyncCall mechanism is used to protect against flooding the server with
-more drawing than it can keep up with.  Even though a direct approach would
-be one request for each motion, it's still possible to overload the server
-if it sends a lot of motion notifies or if it's not very fast at drawing
-wide lines.  The effect of SyncCall is to delay further drawing until
-hearing back from the server that the previous has completed.
+more drawing than it can keep up with.  Each motion event would only result
+in a few drawing requests, but it's still easy to overload the server if it
+sends a lot of motions or if it's not very fast at drawing wide lines.  The
+effect of SyncCall is to delay further drawing until hearing back from the
+server that the previous has completed.
 
 =back
 

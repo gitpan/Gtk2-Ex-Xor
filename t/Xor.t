@@ -26,13 +26,13 @@ use lib 't';
 use MyTestHelpers;
 
 BEGIN {
-SKIP: { eval 'use Test::NoWarnings; 1'
-          or skip 'Test::NoWarnings not available', 1; }
+ SKIP: { eval 'use Test::NoWarnings; 1'
+           or skip 'Test::NoWarnings not available', 1; }
 }
 
 require Gtk2::Ex::Xor;
 
-my $want_version = 9;
+my $want_version = 10;
 cmp_ok ($Gtk2::Ex::Xor::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::Xor->VERSION,  '>=', $want_version,

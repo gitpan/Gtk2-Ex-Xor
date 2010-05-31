@@ -87,7 +87,7 @@ sub _meta_merge_shared_tests {
   }
   if (-e 't/0-Test-YAML-Meta.t') {
     _meta_merge_req_add (_meta_merge_maximum_tests($opts),
-                         'Test::YAML::Meta' => '0.13');
+                         'Test::YAML::Meta' => '0.15');
   }
   if (-e 't/0-META-read.t') {
     if (_min_perl_version_lt ($opts, 5.00307)) {

@@ -33,7 +33,7 @@ use Gtk2::Ex::WidgetBits;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 9;
+our $VERSION = 10;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
@@ -115,7 +115,7 @@ use Glib::Object::Subclass
                   # not a documented feature yet ... and the line crossover
                   # isn't drawn particularly well for wide lines yet ... and
                   # without the zero-width hardware accelerated line it
-                  # might need SyncCall ...
+                  # needs SyncCall ...
                   Glib::ParamSpec->int
                   ('line-width',
                    'line-width',
@@ -199,6 +199,7 @@ sub SET_PROPERTY {
     }
     _maybe_move ($self, $xy_widget, $root_x, $root_y);
     _wcursor_update ($self); # new widget set
+    $self->notify ('widget');
 
   } elsif ($pname eq 'active') {
     # the extra '$self->notify' calls by running 'start' and 'end' here are
@@ -554,9 +555,9 @@ sub _draw {
     if ($clip_region) { $gc->set_clip_region ($clip_region); }
     $win->draw_segments
       ($gc,
-       $x_lo, $y, $x_hi, $y, # horizontal
-       ($y_lo <= $y_top ? ($x, $y_lo, $x, $y_top) : ()),
-       ($y_bottom <= $y_hi ? ($x, $y_bottom, $x, $y_hi) : ()));
+       $x_lo,$y, $x_hi,$y, # horizontal
+       ($y_lo <= $y_top ? ($x,$y_lo, $x,$y_top) : ()),
+       ($y_bottom <= $y_hi ? ($x,$y_bottom, $x,$y_hi) : ()));
     if ($clip_region) { $gc->set_clip_region (undef); }
   }
 }

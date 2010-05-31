@@ -32,7 +32,7 @@ BEGIN {
 
 require Gtk2::Ex::Lasso;
 
-my $want_version = 9;
+my $want_version = 10;
 cmp_ok ($Gtk2::Ex::Lasso::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::Lasso->VERSION,  '>=', $want_version,

@@ -20,7 +20,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 16;
+use Test::More tests => 20;
 
 use lib 't';
 use MyTestHelpers;
@@ -32,7 +32,7 @@ BEGIN {
 
 require Gtk2::Ex::CrossHair;
 
-my $want_version = 9;
+my $want_version = 10;
 cmp_ok ($Gtk2::Ex::CrossHair::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::CrossHair->VERSION,  '>=', $want_version,
@@ -97,7 +97,39 @@ sub show_wait {
 SKIP: {
   require Gtk2;
   Gtk2->disable_setlocale;  # leave LC_NUMERIC alone for version nums
-  if (! Gtk2->init_check) { skip 'due to no DISPLAY available', 8; }
+  if (! Gtk2->init_check) { skip 'due to no DISPLAY available', 12; }
+
+  # setting 'widget' notifies 'widgets' too
+  {
+    my $widget = Gtk2::Window->new ('toplevel');
+    my $cross = Gtk2::Ex::CrossHair->new;
+    
+    my $seen_widget = 0;
+    my $seen_widgets = 0;
+    $cross->signal_connect ('notify::widget'  => sub { $seen_widget++; });
+    $cross->signal_connect ('notify::widgets' => sub { $seen_widgets++; });
+
+    $cross->set (widget => $widget);
+    is ($seen_widget,  1, 'notify widget');
+    is ($seen_widgets, 1, 'notify widgets');
+    $widget->destroy;
+  }
+
+  # setting 'widgets' notifies 'widget' too
+  {
+    my $widget = Gtk2::Window->new ('toplevel');
+    my $cross = Gtk2::Ex::CrossHair->new;
+    
+    my $seen_widget = 0;
+    my $seen_widgets = 0;
+    $cross->signal_connect ('notify::widget'  => sub { $seen_widget++; });
+    $cross->signal_connect ('notify::widgets' => sub { $seen_widgets++; });
+
+    $cross->set (widgets => [$widget]);
+    is ($seen_widget,  1, 'notify widget');
+    is ($seen_widgets, 1, 'notify widgets');
+    $widget->destroy;
+  }
 
 
   # destroyed when weakened empty
@@ -198,7 +230,7 @@ SKIP: {
     $widget->destroy;
   }
 
-  # end()emits "notify::active"
+  # end() emits "notify::active"
   {
     my $widget = Gtk2::Window->new ('toplevel');
     $widget->realize;
