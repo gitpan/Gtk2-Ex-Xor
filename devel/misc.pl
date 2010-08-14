@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright 2008, 2010 Kevin Ryde
+# Copyright 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -22,13 +22,13 @@ use strict;
 use warnings;
 use Gtk2 '-init';
 
-my $toplevel = Gtk2::Window->new ('toplevel');
+{
+  my $screen = Gtk2::Gdk::Screen->get_default;
+  my $window = $screen->get_root_window;
+  my $gc = Gtk2::Gdk::GC->new ($window, {});
+  $gc->set_dashes (1);
+#  $gc->set_dashes (1, 2, 3, 4);
+  exit 0;
+}
 
-my $fontsel = Gtk2::FontSelection->new;
-$toplevel->add ($fontsel);
 
-$fontsel->set_font_name ('cursor');
-my $font = $fontsel->get_font;
-print $font;
-
-exit 0;

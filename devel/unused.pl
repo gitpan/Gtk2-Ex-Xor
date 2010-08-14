@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright 2008, 2010 Kevin Ryde
+# Copyright 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -18,17 +18,13 @@
 # with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
-use strict;
-use warnings;
-use Gtk2 '-init';
+__END__
 
-my $toplevel = Gtk2::Window->new ('toplevel');
-
-my $fontsel = Gtk2::FontSelection->new;
-$toplevel->add ($fontsel);
-
-$fontsel->set_font_name ('cursor');
-my $font = $fontsel->get_font;
-print $font;
-
-exit 0;
+    my $width = $self->{'line_width'} || 1;
+    my $y_top = $y - $width;
+    my $y_bottom = $y + $width;
+#     $win->draw_segments
+#       ($gc,
+#        $x_lo,$y, $x_hi,$y, # horizontal
+#        ($y_lo <= $y_top ? ($x,$y_lo, $x,$y_top) : ()),
+#        ($y_bottom <= $y_hi ? ($x,$y_bottom, $x,$y_hi) : ()));

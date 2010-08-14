@@ -1,6 +1,6 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
-# Copyright 2008, 2009 Kevin Ryde
+# Copyright 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -17,12 +17,14 @@
 # You should have received a copy of the GNU General Public License along
 # with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use strict;
 use warnings;
 use Gtk2 '-init';
 use Gtk2::Ex::CrossHair;
 use Data::Dumper;
+
+# uncomment this to run the ### lines
+use Smart::Comments;
 
 use FindBin;
 my $progname = $FindBin::Script;
@@ -108,7 +110,8 @@ $vbox->pack_start ($entry, 0,0,0);
 
 
 my $cross = Gtk2::Ex::CrossHair->new
-  (widgets => [ $area1, $area2, $eventbox, $entry ],
+  (widgets => [ # $area1,
+                $area2, $eventbox, $entry ],
    foreground => 'orange',
   );
 $cross->signal_connect
@@ -362,6 +365,36 @@ $area1->signal_connect
     $area2->modify_bg ('normal', $color);
     return 1; # keep running
   }
+}
+{
+  my $button = Gtk2::Button->new_with_label ('Event Mask');
+  $button->signal_connect (clicked => sub {
+                             foreach my $widget ($area1, $area2) {
+                               my $events = $widget->window->get_events;
+                               print "$progname: $widget $events\n";
+                             }
+                           });
+  $vbox1->pack_start ($button, 0,0,0);
+}
+{
+  my $button = Gtk2::Button->new_with_label ('Add Area 1');
+  $button->signal_connect
+    (clicked => sub {
+       $cross->set (widgets => [ @{$cross->get('widgets')}, $area1 ]);
+       ### widgets now: map{"$_"} @{$cross->get('widgets')}
+     });
+  $vbox1->pack_start ($button, 0,0,0);
+}
+{
+  my $button = Gtk2::Button->new_with_label ('Drop Area 1');
+  $button->signal_connect
+    (clicked => sub {
+       my $widgets = $cross->get('widgets');
+       my @new_widgets = grep {$_ != $area1} @$widgets;
+       $cross->set(widgets => \@new_widgets);
+       ### widgets now: map{"$_"} @{$cross->get('widgets')}
+     });
+  $vbox1->pack_start ($button, 0,0,0);
 }
 
 $toplevel->show_all;

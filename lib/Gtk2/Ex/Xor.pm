@@ -21,51 +21,130 @@ use strict;
 use warnings;
 use Carp;
 use Gtk2;
+use List::Util;
 
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 10;
+our $VERSION = 11;
 
-sub get_gc {
-  my ($widget, $fg_color, @params) = @_;
+my $cache;
 
-  my $xor_bg_color = $widget->Gtk2_Ex_Xor_background;
-  my $colormap = $widget->get_colormap;
+# widget/window/colormap/depth
+#    - alternate ways of specifying colormap and depth
+# foreground/background
+#    - color object R/G/B
+#    - string to parse
+#    - number pixel
+#    - undef for style fg/bg
+# foreground_xor / background_xor
+#    - same but then xored against $widget->Gtk2_Ex_Xor_background
+# dash_offset, dash_list
+#    - shared, not otherwise handled by Gtk2::GC
 
-  if (! defined $fg_color) {
-  STYLE:
-    $fg_color = $widget->get_style->fg ($widget->state);
+sub shared_gc {
+  my (%params) = @_;
+  ### shared_gc()
+  $params{'function'} = 'xor';
 
-  } else {
-    if (ref $fg_color) {
-      $fg_color = $fg_color->copy;
-    } else {
-      my $str = $fg_color;
-      $fg_color = Gtk2::Gdk::Color->parse ($str);
-      if (! $fg_color) {
-        carp "Gtk2::Gdk::Color->parse() cannot parse '$str' (fallback to style foreground)";
-        goto STYLE;
+  my $widget = delete $params{'widget'};
+  my $window = delete $params{'window'} || $widget->Gtk2_Ex_Xor_window;
+  my $colormap = delete $params{'colormap'} || $window->get_colormap;
+  my $depth = delete $params{'depth'} || $colormap->get_visual->depth;
+
+  {
+    my @colors;
+    my $xor_color;
+    foreach my $fb ('fore','back') {
+      my $color;
+      if (defined ($color = delete $params{"${fb}ground_xor"})) {
+        if (! defined $xor_color) {
+          $xor_color = $widget->Gtk2_Ex_Xor_background;
+          ### xor pixel: $xor_color->pixel
+        }
+        $color = Gtk2::Gdk::Color->new
+          (0,0,0, $xor_color->pixel ^ _color_lookup($colormap,$color)->pixel);
+      } elsif (defined ($color = delete $params{"${fb}ground"})) {
+        $color = _color_lookup ($colormap, $color);
+      } else {
+        my $method = ($fb eq 'fore' ? 'fg' : 'bg');
+        $color = $widget->get_style->$method ($widget->state);
       }
+      push @colors, $color;
     }
-    # a shared colour alloc is friendlier to pseudo-colour visuals, but if
-    # the rest of gtk is using the rgb chunk anyway then may as well do the
-    # same
-    $colormap->rgb_find_color ($fg_color);
+    ($params{'foreground'}, $params{'background'}) = @colors;
+  }
+  ### pixels: sprintf "fg %#x bg %#x", $params{'foreground'}->pixel, $params{'background'}->pixel
+
+  ### dash_offset: $params{'dash_offset'}
+  if (! $params{'dash_offset'}) {  # default 0
+    delete $params{'dash_offset'};
+  }
+  ### dash_list: $params{'dash_list'}
+  if (_dash_list_is_default ($params{'dash_list'})) {
+    delete $params{'dash_list'};
   }
 
-  ### pixels: sprintf "fg %#x bg %#x xor %#x\n", $fg_color->pixel, $xor_bg_color->pixel, $fg_color->pixel ^ $xor_bg_color->pixel
-  my $xor_color = Gtk2::Gdk::Color->new
-    (0,0,0, $fg_color->pixel ^ $xor_bg_color->pixel);
+  # use plain Gtk2::GC if no dashes
+  if (! $params{'dash_offset'} && ! $params{'dash_list'}) {
+    ### use plain Gtk2-GC
+    return Gtk2::GC->get ($depth, $colormap, \%params);
+  }
 
-  my $window = $widget->Gtk2_Ex_Xor_window;
-  my $depth = $window->get_depth;
-  return Gtk2::GC->get ($depth, $colormap,
-                        { function   => 'xor',
-                          foreground => $xor_color,
-                          background => $xor_color,
-                          @params
-                        });
+  $cache ||= do {
+    require Tie::RefHash::Weak;
+    tie (my %cache, 'Tie::RefHash::Weak');
+    \%cache
+  };
+  my $key = join (';',
+                  "colormap=$colormap;depth=$depth",
+                  map { my $value = $params{$_};
+                        if (/ground$/) {
+                          $value = $value->pixel;
+                        } elsif ($_ eq 'dash_list') {
+                          $value = join(',',@$value);
+                        }
+                        "$_=$value"
+                      } sort keys %params);
+  return ($cache->{$key} ||= do {
+    ### Xor new gc: $key
+    my $dash_offset = delete $params{'dash_offset'} || 0;
+    my $dash_list   = delete $params{'dash_list'} || [4];
+    my $gc = Gtk2::Gdk::GC->new ($window, \%params);
+    $gc->set_dashes ($dash_offset, @$dash_list);
+    $gc
+  });
+}
+
+sub _color_lookup {
+  my ($colormap, $color) = @_;
+  if (ref $color) {
+    # copy so as not to clobber pixel field
+    $color = $color->copy;
+  } elsif (Scalar::Util::looks_like_number($color)) {
+    return Gtk2::Gdk::Color->new (0,0,0, $color);
+  } else {
+    my $str = $color;
+    $color = Gtk2::Gdk::Color->parse ($str)
+      || croak "Cannot parse colour '$str'";
+  }
+  # a shared colour alloc would be friendlier to pseudo-colour visuals, but
+  # if the rest of gtk is using the rgb chunk anyway then may as well do the
+  # same
+  $colormap->rgb_find_color ($color);
+  return $color;
+}
+
+
+# Return true if arrayref $dash_list is the same as the Gtk2::Gdk::GC
+# default dashes, which is 4,4.  An array of 4 or repetitions of 4 is the
+# default, any segment length other than 4 is not the same as the default.
+#
+sub _dash_list_is_default {
+  my ($dash_list) = @_;
+  # a value other than 4 is 
+  return ! (defined $dash_list
+            && List::Util::first {$_ != 4} @$dash_list);
 }
 
 sub _event_widget_coords {

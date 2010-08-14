@@ -53,6 +53,9 @@ MyMakeMakerExtras::WriteMakefile
 
                     # 1.18 for pure-perl refaddr() fix
                     'Scalar::Util' => 1.18,
+
+                    # maybe 0.05 for bug fixes
+                    'Tie::RefHash::Weak' => '0.05',
                    },
 
 
@@ -60,11 +63,12 @@ MyMakeMakerExtras::WriteMakefile
    => { resources
         => { homepage => 'http://user42.tuxfamily.org/gtk2-ex-xor/index.html' },
         optional_features
-        => { maximum_tests
-             => { description => 'Have "make test" do as much as possible.',
-                  requires => { 'Test::NoWarnings' => 0,
-                              },
-                },
+        => { 
+#             maximum_tests
+#              => { description => 'Have "make test" do as much as possible.',
+#                   requires => { 
+#                               },
+#                 },
              maximum_devel
              => { description => 'Stuff used variously for development.',
                   requires => { 'Gtk2::Ex::Dragger'    => 0,

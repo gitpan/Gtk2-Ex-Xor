@@ -20,19 +20,15 @@
 
 use strict;
 use warnings;
-use Test::More tests => 14;
+use Test::More tests => 13;
 
 use lib 't';
 use MyTestHelpers;
-
-BEGIN {
- SKIP: { eval 'use Test::NoWarnings; 1'
-           or skip 'Test::NoWarnings not available', 1; }
-}
+BEGIN { MyTestHelpers::nowarnings() }
 
 require Gtk2::Ex::Lasso;
 
-my $want_version = 10;
+my $want_version = 11;
 cmp_ok ($Gtk2::Ex::Lasso::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::Lasso->VERSION,  '>=', $want_version,

@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 # Copyright 2010 Kevin Ryde
 
@@ -78,26 +78,33 @@ sub draw {
     my $color = Gtk2::Gdk::Color->parse ('red');
     my $colormap = $area->get_colormap;
     $colormap->alloc_color ($color, 0, 1);
-    Gtk2::GC->get ($win->get_depth,
-                   $colormap,
-                   { foreground => $color })
-    });
+    my $gc = Gtk2::GC->get ($win->get_depth,
+                            $colormap,
+                            { foreground => $color });
+    $gc->{'foreground'} = $color;
+    $gc
+  });
 
   my $right_gc = ($area->{'right_gc'} ||= do {
     my $color = Gtk2::Gdk::Color->parse ('sea green');
     my $colormap = $area->get_colormap;
     $colormap->alloc_color ($color, 0, 1);
-    Gtk2::GC->get ($win->get_depth, $colormap,
-                   { foreground => $color })
+    my $gc = Gtk2::GC->get ($win->get_depth,
+                            $colormap,
+                            { foreground => $color });
+    $gc->{'foreground'} = $color;
+    $gc
     });
 
   my $vert_gc = ($area->{'vert_gc'} ||= do {
     my $color = Gtk2::Gdk::Color->parse ('blue');
     my $colormap = $area->get_colormap;
     $colormap->alloc_color ($color, 0, 1);
-    Gtk2::GC->get ($win->get_depth,
-                   $colormap,
-                   { foreground => $color })
+    my $gc = Gtk2::GC->get ($win->get_depth,
+                            $colormap,
+                            { foreground => $color });
+    $gc->{'foreground'} = $color;
+    $gc
     });
 
   my $screen = $area->get_screen;

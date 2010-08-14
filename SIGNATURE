@@ -15,61 +15,65 @@ not run its Makefile.PL or Build.PL.
 Hash: SHA1
 
 SHA1 842745cb706f8f2126506f544492f7a80dbe29b3 COPYING
-SHA1 006e6ed1d9859845e1b823a3183ae627e0d5e67f Changes
-SHA1 915a7c0928ffc32005b08c81c5d872031d999cab MANIFEST
-SHA1 2e9c13dc6e456ea6b5c3be76b743a63a0442e035 MANIFEST.SKIP
-SHA1 3661fd265df1d878767ece316d1579159ad25c83 META.yml
-SHA1 541db787be584f46dfbbe26ef918f09159c3524b Makefile.PL
+SHA1 4998fb5b1cf0b68f848388277a6de0f86e782948 Changes
+SHA1 81bd654a06b0427b0eb74e1070bade93b6201e4c MANIFEST
+SHA1 9f057ed3ba7d042426c4d899f7685b4ae05076b2 MANIFEST.SKIP
+SHA1 53f4f12e6d4c912dedbdf2d969f0400c468db65f META.yml
+SHA1 d3f843793551c422df6e9a224aa35425cdadd39c Makefile.PL
 SHA1 17749d5b5fd52fa9378f9411fc6807e1db96ddce README
-SHA1 c2b6e7285c3b82da984f82de78e5a5161ec94f3c debian/changelog
+SHA1 c5fd564e9d348792d3ce360b2efe21b163d4b940 debian/changelog
 SHA1 ac3478d69a3c81fa62e60f5c3696165a4e5e6ac4 debian/compat
-SHA1 104c2dfcce6b60f56507ef0e85514c9dac7ede88 debian/control
+SHA1 f3a620e351684bff271c8f628d139396f23828d7 debian/control
 SHA1 91660943f231ff3155b8b059810f7db1c979b01d debian/copyright
 SHA1 b21dd8f805f87ac933fba36dba6c87af0f54cd2a debian/rules
 SHA1 61652cd1568dcf2614df833eba241755eee34e89 debian/source/format
 SHA1 e4f8d0bdfd6e32e3f503951e4ea7a9bb6cb6beba debian/watch
-SHA1 21944e719194f54721fc84aacee7e9bb59484956 devel/cross-and-dragger.pl
-SHA1 007384c572b8a843d85fdc0f18d4503d869490a7 devel/cross-ids.pl
-SHA1 afa151d4ebdd5c81f4b6cf195f3c1614faee5cb5 devel/cross-new-xy.pl
-SHA1 a1d432f317daca20371a8a84515db5b421c15e3d devel/cross-screenshot.pl
-SHA1 714342b7aea9b752d64061f8050e8ec0a0a6b160 devel/cross-toplevels.pl
-SHA1 800c0048909c8b7dd4123fb7f7bb6f81de764774 devel/cross.pl
-SHA1 7b1754fab13c42451ebec44a996ebd7337494afd devel/gnome-canvas.pl
-SHA1 58760ac61af251cac72fe02ceecd4c6f08e6f8da devel/goo-canvas.pl
-SHA1 c5c32a8328f8467f1adbbdc1758fcf3e50a38397 devel/hand1.pl
-SHA1 9eb89c52888f5de8dc630658afb3bef870ab6177 devel/image.pl
-SHA1 8a4fe70cb6a5269bd870301daea29374d058f8ce devel/lasso-entry.pl
-SHA1 6df5e03123480aefb082c4e2c8ae4ee7588045ef devel/lasso-screenshot.pl
-SHA1 7c54a99cd7122ea365e9f496505f87e809eba742 devel/lasso.pl
-SHA1 765958bfdd7baeb54824d9c555c6bb0bf3f33240 devel/layout.pl
-SHA1 73438a88298315de3f0f0a383656ba986a92d669 devel/textview.pl
-SHA1 761fcd851734d3f47064705c242879c608fd7746 devel/ticker.pl
-SHA1 01608e68d05d3e3fc925fb278c0b116620b5f59e devel/viviani.pl
-SHA1 e077d6723d82b3a9a5a157ec4ed9429072e4f9d9 examples/cross-area.pl
-SHA1 1be1c897acdb72324d493055ffd302aa4ac4f1ea examples/cross-label.pl
-SHA1 8ab968354f448c8f2f203ee43dcdd8d53be55102 examples/cross-textview.pl
-SHA1 7696dfea430ede8e71fe38218f193dbad3fc7af6 examples/lasso-area.pl
-SHA1 5558edc5e44856cc82bb7648d031bfd6c64a346d inc/MyMakeMakerExtras.pm
-SHA1 63427b66eb26f013f10c835b0cf320c93361f310 inc/my_pod2html
+SHA1 f59da1f0200f4f0cd8d33cb6b4a242f9e8ff7a74 devel/GNUmakefile
+SHA1 48e6c2b77f96df6ccb91a8abb406e80e4e23acb3 devel/cross-and-dragger.pl
+SHA1 4c07f0d3ea625d2bd83ce100a0bc6cec2f045695 devel/cross-ids.pl
+SHA1 a5ae3dcc0011a16cc1044ed769a0525f88edf5fb devel/cross-new-xy.pl
+SHA1 1ead38950e325fa46b4818e2e81b9dca09d5d6f6 devel/cross-screenshot.pl
+SHA1 b6f022d09032e49c4ff71186d5b63f548d3be22f devel/cross-toplevels.pl
+SHA1 52554f180ccac0f374fd35ebd79c6443fd47ab4e devel/cross.pl
+SHA1 7006a288d263720fcae6f48f7653a88cd01817eb devel/gnome-canvas.pl
+SHA1 84b8d6ebf6b67f952e7a7844dcf77b3bc88db29a devel/goo-canvas.pl
+SHA1 fe46591696c9e755e666ce796dc7e4abc10f044e devel/gtk-gc-colour.c
+SHA1 e76bc3c94e2dd8a0f99157bf5ee60b8cae1d091d devel/gtk-gc.pl
+SHA1 edda04c3bc7f893a34275c7428ba5ea38d3bf878 devel/hand1.pl
+SHA1 51707e11360831031d0c2b995da7c2eacb48c2d6 devel/image.pl
+SHA1 4b4a23ab955dcf38af5388e78feebd251dcec67c devel/lasso-entry.pl
+SHA1 bf5d4c46261cb96646bfcb95cce61ce66c63dcbc devel/lasso-screenshot.pl
+SHA1 9d475f18ff49d81aaa9f55de8215767e37a6cf32 devel/lasso.pl
+SHA1 d9aba69a9c3bf924f32c0bb4c09c91b76f3d44ec devel/layout.pl
+SHA1 d74662c8675eaf422fa52efde3e5052fdfe69a8c devel/misc.pl
+SHA1 2e1034ea11ab4d2fe4ae01ac0ab5d5a30a0ae65e devel/textview.pl
+SHA1 a07def6026c177d1ed82710c10abc0cd535fc0fd devel/ticker.pl
+SHA1 0d9ac661b96d7d3aa0bef49f6f0f5a38254a0ec3 devel/unused.pl
+SHA1 496591a8d9cabc26dd982847dcb61fba8adc62d6 devel/viviani.pl
+SHA1 ff5c607e7ce205bb236c2393634f50df7c8cda01 examples/cross-area.pl
+SHA1 1e22c129a44f8c6928635e56ac21d5c0d27531f0 examples/cross-label.pl
+SHA1 15411fb81687b82978e850fcfee8e1aefac092e9 examples/cross-textview.pl
+SHA1 c4acf8372855b7707078e6b400a7bfebbd5350f4 examples/lasso-area.pl
+SHA1 3f00375a75a28eb28c9216d722220e52aec8e58d inc/MyMakeMakerExtras.pm
+SHA1 692a1ddc2ca6b98cac7b48ea40bc1ac1509e8ed9 inc/my_pod2html
 SHA1 ecc98dad6420731b5efd494a196e252e6280da1c junk/canvas.pl
-SHA1 054d37f2df9661dc4ffda63a5e8607f469289c34 lib/Gtk2/Ex/CrossHair.pm
-SHA1 511e9555e059c9a81d00543006f71198715bc5e3 lib/Gtk2/Ex/Lasso.pm
-SHA1 a2e7f8c84f76c62463e8ec178d387580ea7fa76a lib/Gtk2/Ex/Xor.pm
-SHA1 d5d5c83c83918d8c97ca79e92ea840cdf277f01f t/0-META-read.t
+SHA1 a738a30d0abc0f25e786bcc08093d305c9385edc lib/Gtk2/Ex/CrossHair.pm
+SHA1 24a23c54c4d9aa9ac558f362fbc6a58d85dcc6ec lib/Gtk2/Ex/Lasso.pm
+SHA1 401772759a56db34508e6f3fc72642c8cdddb199 lib/Gtk2/Ex/Xor.pm
+SHA1 9127f78a0dfa04976acbb979dd7862ef59a74c58 t/0-META-read.t
 SHA1 37abd43b41068804ea4bb099fdd89af21be82926 t/0-Test-DistManifest.t
 SHA1 8f93fb4c8f0424a4442cc93c9a2e86342ef55281 t/0-Test-Pod.t
 SHA1 1de8f07883f6bf1a2ef79f2cb8adf1deb3f61cee t/0-Test-Synopsis.t
 SHA1 fb517c2fae5ddac559318bf6a224949115ea3129 t/0-Test-YAML-Meta.t
-SHA1 98274c8f043e7d92f89da6201acf960a00b04ebe t/0-exe-shebang.t
-SHA1 42efb7dc7d28033ad8a837baded716abffa76e05 t/CrossHair-overload.t
-SHA1 675bd96d3854f18a92035d60217fcdc9b22132d2 t/CrossHair.t
-SHA1 79c2448bed5aeff33bad85f25c1a4f059c5d29e1 t/Lasso.t
-SHA1 e5b9059d5e27d380fc9418095d773ad5f96baa06 t/MyTestHelpers.pm
-SHA1 156485631d150da6d358dba746b027cc3add4de9 t/Xor.t
+SHA1 e48f479cc53a5b5f654a994b76f9823268cc96aa t/CrossHair-overload.t
+SHA1 5eae7e11b6a712937d5a17ff985fc11c1a3f3c08 t/CrossHair.t
+SHA1 572ef0bb88349103de8eee9667419df862b2c4c4 t/Lasso.t
+SHA1 b98ec63aaa140101fe850d117c483d88b25a32a9 t/MyTestHelpers.pm
+SHA1 a38f22d62322988e990bedaffedb1d917712f69d t/Xor.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.10 (GNU/Linux)
 
-iD8DBQFMBEotLFMCIV9q3ToRAmMwAKCIOrRwXe4XmUi0IGxwfrMeXp0yrACgh1mG
-wFiKNa6REYp+0PpXXLIVLE0=
-=f0QS
+iD8DBQFMZeyxLFMCIV9q3ToRApReAJoCFZp/4Xvfb5VgXWhGGwNOHsBgIwCfRryV
+nNuHTn97mZXVVuV2EaHCS3g=
+=+GX9
 -----END PGP SIGNATURE-----

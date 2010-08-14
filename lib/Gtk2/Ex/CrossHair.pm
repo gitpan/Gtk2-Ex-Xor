@@ -33,11 +33,9 @@ use Gtk2::Ex::WidgetBits;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 10;
+our $VERSION = 11;
 
-use constant DEFAULT_LINE_STYLE => 'on_off_dash';
-
-# In each instance the private fields are
+# In each CrossHair the private fields are
 #
 #   xy_widget
 #       The widget to report in the 'moved' signal, or undef.
@@ -53,8 +51,8 @@ use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 #       sync_call_handler().
 #
 #   wcursor
-#       Gtk2::Ex::WidgetCursor setting an invisible cursor in the crosshair
-#       widget.
+#       Gtk2::Ex::WidgetCursor object putting an invisible cursor in the
+#       crosshair widgets.
 #
 # The _pw() func gives a hash of per-widget data.  Its fields are
 #
@@ -112,29 +110,26 @@ use Glib::Object::Subclass
                    'The colour to draw the crosshair, either a string name (including hex RGB), a Gtk2::Gdk::Color, or undef for the widget\'s style foreground.',
                    Glib::G_PARAM_READWRITE),
 
-                  # not a documented feature yet ... and the line crossover
-                  # isn't drawn particularly well for wide lines yet ... and
-                  # without the zero-width hardware accelerated line it
-                  # needs SyncCall ...
                   Glib::ParamSpec->int
                   ('line-width',
                    'line-width',
                    'The width of the cross lines drawn.',
-                   0, POSIX::INT_MAX(),
-                   0, # default
+                   0, POSIX::INT_MAX(),  # limits
+                   0,                    # default
                    Glib::G_PARAM_READWRITE),
                 ];
 
 
 sub INIT_INSTANCE {
   my ($self) = @_;
+  ### CrossHair INIT_INSTANCE
   $self->{'button'} = 0;
   $self->{'widgets'} = [];
 }
 
 sub FINALIZE_INSTANCE {
   my ($self) = @_;
-  ### CrossHair finalize
+  ### CrossHair finalize: "$self"
   $self->end;
 }
 
@@ -165,7 +160,7 @@ sub SET_PROPERTY {
   my ($self, $pspec, $newval) = @_;
   my $pname = $pspec->get_name;
   my $oldval = $self->{$pname};
-  ### CrossHair SET_PROPERTY: $pname, $newval
+  ### CrossHair SET_PROPERTY: $pname
 
   if ($pname eq 'widget') {
     $pname = 'widgets';
@@ -175,14 +170,24 @@ sub SET_PROPERTY {
 
   if ($pname eq 'widgets') {
     my $widgets = $newval;
+    ### new widgets: map {"$_"} @$widgets
 
     _undraw ($self);
+
+    my $old_perwidget = $self->{'perwidget'};
     my %new_perwidget;
+    $self->{'perwidget'} = \%new_perwidget;
+
     foreach my $widget (@$widgets) {
-      $new_perwidget{refaddr($widget)}
-        = _pw($self,$widget) || _pw_new($self,$widget);
+      my $key = refaddr($widget);
+      ### perwidget key: refaddr($widget)
+      unless ($new_perwidget{$key} = $old_perwidget->{$key}) {
+        _pw_new($self,$widget);
+      }
     }
-    $self->{'perwidget'} = \%new_perwidget;  # discards pw's of old widgets
+    undef $old_perwidget; # discard pw's of old widgets
+    ### perwidget keys now: keys %{$self->{'perwidget'}}
+
     $self->{$pname} = $newval;  # per default GET_PROPERTY
 
     my $xy_widget = $self->{'xy_widget'};
@@ -203,7 +208,7 @@ sub SET_PROPERTY {
 
   } elsif ($pname eq 'active') {
     # the extra '$self->notify' calls by running 'start' and 'end' here are
-    # ok, Glib suppresses duplicates while in a SET_PROPERTY
+    # ok, Glib suppresses duplicates while in SET_PROPERTY
     if ($newval && ! $oldval) {
       $self->start;
     } elsif ($oldval && ! $newval) {
@@ -224,39 +229,42 @@ sub SET_PROPERTY {
 
 sub _pw_new {
   my ($self, $widget) = @_;
+  ### _pw_new(): "$widget"
 
-  # These are events needed in button drag mode, ie. when start() is
-  # called with a button event.  The alternative would be to turn them on
-  # by a new Gtk2::Gdk->pointer_grab() to change the implicit grab, though
-  # 'button-release-mask' is best turned on in advance in case we're
-  # lagged and it happens before we change the event mask.
+  # These are events needed in button drag mode, ie. when start() is called
+  # with a button event.  The alternative would be to turn them on by a new
+  # Gtk2::Gdk->pointer_grab() to change the implicit grab, though
+  # 'button-release-mask' is best turned on in advance in case we're lagged
+  # and it happens before we change the event mask.
   #
   # 'exposure-mask' is not here since if nothing else is drawing then
   # there's no need for us to redraw over its changes.
-  #
+
   $widget->add_events(['button-motion-mask',
                        'button-release-mask',
                        'pointer-motion-mask',
                        'enter-notify-mask',
                        'leave-notify-mask']);
-
-  #       require Gtk2::Ex::WidgetEvents;
-  #       push @static_setups, Gtk2::Ex::WidgetEvents->new
-  #         ($widget, ['button-motion-mask',
-  #                    'button-release-mask' ]);
+  #   require Gtk2::Ex::WidgetEvents;
+  #   my $wevents = Gtk2::Ex::WidgetEvents->new
+  #     ($widget, ['button-motion-mask',
+  #                'button-release-mask',
+  #                'pointer-motion-mask',
+  #                'enter-notify-mask',
+  #                'leave-notify-mask']);
 
   my $ref_weak_self = Gtk2::Ex::Xor::_ref_weak ($self);
-  my $pw = { static_ids => Glib::Ex::SignalIds->new
-             ($widget,
-              $widget->signal_connect (style_set => \&_do_style_set,
-                                       $ref_weak_self)),
-           };
+  $self->{'perwidget'}->{refaddr($widget)}
+    = { # wevents => $wevents,
+       static_ids => Glib::Ex::SignalIds->new
+       ($widget, $widget->signal_connect (style_set => \&_do_style_set,
+                                          $ref_weak_self)),
+      };
+
   if ($self->{'active'}) {
     _pw_start ($self, $widget);
     _draw ($self, [$widget]);
   }
-  return $pw;
-
 }
 
 sub start {
@@ -320,18 +328,19 @@ sub start {
 
 sub _wcursor_update {
   my ($self) = @_;
-  ### CrossHair _wcursor_update()
+  ### CrossHair _wcursor_update(): "$self"
   $self->{'wcursor'} = $self->{'active'} && do {
     require Gtk2::Ex::WidgetCursor;
     Gtk2::Ex::WidgetCursor->new
         (widgets => $self->{'widgets'},
          cursor  => 'invisible',
-         active  => 0)
+         active  => 1)
       };
 }
 
 sub _pw_start {
   my ($self, $widget) = @_;
+  ### CrossHair _pw_start(): "$widget"
 
   my $ref_weak_self = Gtk2::Ex::Xor::_ref_weak ($self);
   _pw($self,$widget)->{'dynamic_ids'} = Glib::Ex::SignalIds->new
@@ -403,7 +412,7 @@ sub _do_enter_notify {
   return 0; # Gtk2::EVENT_PROPAGATE
 }
 
-# 'leave-notify-event' signal on the widgets
+# 'leave-notify-event' signal on one of the widgets
 sub _do_leave_notify {
   my ($widget, $event, $ref_weak_self) = @_;
   ### CrossHair _do_leave_notify(): "$widget " . $event->x_root . "," . $event->y_root
@@ -416,7 +425,7 @@ sub _do_leave_notify {
   return 0; # Gtk2::EVENT_PROPAGATE
 }
 
-# 'button-release-event' signal on the widgets
+# 'button-release-event' signal on one of the widgets
 sub _do_button_release {
   my ($widget, $event, $ref_weak_self) = @_;
   if (my $self = $$ref_weak_self) {
@@ -486,6 +495,7 @@ sub _undraw {
     # position undetermined as well as undrawn
     delete _pw($self,$widget)->{'x'};
   }
+  ### _undraw() done
 }
 
 # $widgets is an arrayref of widgets to draw, or undef for all
@@ -516,13 +526,20 @@ sub _draw {
 
     my $gc = ($pw->{'gc'} ||= do {
       ### create gc
-      Gtk2::Ex::Xor::get_gc ($widget, $self->{'foreground'},
-                             line_width => ($self->{'line_width'} || 0),
-                             line_style => ($self->{'line_style'}
-                                            || DEFAULT_LINE_STYLE),
-                             cap_style => 'butt',
-                             # subwindow_mode => 'include_inferiors',
-                            );
+      my $line_width = $self->get('line_width');
+      my $line_style = $self->{'line_style'} || 'double-dash';
+      Gtk2::Ex::Xor::shared_gc
+          (widget         => $widget,
+           foreground_xor => $self->{'foreground'},
+           background     => 0,  # no change
+           line_width     => $line_width,
+           line_style     => $line_style,
+           fill           => 'stippled',
+           cap_style      => 'projecting',
+           ($line_style eq 'solid' ? ()
+            : (dash_list => [ ($line_width || 1) * 4 ])),
+           # subwindow_mode => 'include_inferiors',
+          );
     });
 
     if ($win != $widget->window) {
@@ -548,16 +565,12 @@ sub _draw {
       $x_lo = 0;
       $y_lo = 0;
     }
-    my $width = $self->{'line_width'} || 1;
-    my $y_top = $y - POSIX::ceil ($width/2);
-    my $y_bottom = $y_top + $width + 1;
 
     if ($clip_region) { $gc->set_clip_region ($clip_region); }
     $win->draw_segments
       ($gc,
-       $x_lo,$y, $x_hi,$y, # horizontal
-       ($y_lo <= $y_top ? ($x,$y_lo, $x,$y_top) : ()),
-       ($y_bottom <= $y_hi ? ($x,$y_bottom, $x,$y_hi) : ()));
+       $x_lo,$y, $x_hi,$y,  # horizontal
+       $x,$y_lo, $x,$y_hi); # vertical
     if ($clip_region) { $gc->set_clip_region (undef); }
   }
 }
@@ -731,18 +744,13 @@ pointer position on top of one or more widgets' existing contents.  This is
 intended as a visual guide for the user.
 
         +-----------------+
-        |         |       |
-        |         | mouse |
-        |         |/      |
-        | --------+------ |
-        |         |       |
-        |         |       |
-        |         |       |
-        |         |       |
-        +-----------------+
-        +-----------------+
-        |         |       |
-        |         |       |
+        |         |       | +-----------------+
+        |         | mouse | |                 |
+        |         |/      | |                 |
+        | --------+------ | | --------------- |
+        |         |       | |                 |
+        |         |       | |                 |
+        |         |       | +-----------------+
         |         |       |
         +-----------------+
 
@@ -761,8 +769,8 @@ obscure the lines.  This is done with the WidgetCursor mechanism (see
 L<Gtk2::Ex::WidgetCursor>) and so cooperates with other widget or
 application uses of that.
 
-The crosshair is drawn using xors in the widget window.  See
-L<Gtk2::Ex::Xor> for notes on that.
+The crosshair is drawn using xors in the widget window (see
+L<Gtk2::Ex::Xor>).
 
 =head1 FUNCTIONS
 
@@ -784,9 +792,9 @@ initial properties as per C<< Glib::Object->new >>.  Eg.
 
 Start or end crosshair display.
 
-For C<start> the optional C<$event> is a C<Gtk2::Gdk::Event>.  If it's a
-mouse button press then the crosshair is active as long as that button is
-pressed.  If C<$event> is a keypress, or C<undef>, or not given, then the
+For C<start> the optional C<$event> is a C<Gtk2::Gdk::Event>.  If C<$event>
+is a mouse button press then the crosshair is active as long as that button
+is pressed.  If C<$event> is a keypress, or C<undef>, or omitted, then the
 crosshair is active until explicitly stopped with an C<end> call.
 
 =back
@@ -804,25 +812,30 @@ button press event.
 =item C<widgets> (array of C<Gtk2::Widget>)
 
 An arrayref of widgets to draw on.  Often this will be just one widget, but
-multiple widgets can be given to draw in them all at the same time.
+multiple widgets can be given to draw in all of them at the same time.
 
-Widgets can be under different toplevels, but they should be all on the same
-screen (ie. L<C<Gtk2::Gdk::Screen>|Gtk2::Gdk::Screen>) since mouse pointer
-movement in any of them is taken to be a position to draw through all of
-them (with coordinates translated).
+Widgets can be under different toplevel windows, but they should be all on
+the same screen (L<C<Gtk2::Gdk::Screen>|Gtk2::Gdk::Screen>) since mouse
+pointer movement in any of them is taken to be a position to draw through
+all of them (with coordinates translated appropriately).
 
-=item C<widget> (C<Gtk2::Widget>)
+=item C<widget> (C<Gtk2::Widget> or C<undef>)
 
 A single widget to operate on.  The C<widget> and C<widgets> properties
 access the same underlying set of widgets to operate on, you can set or get
 whichever best suits.  But if there's more than one widget you can't get
 from the single C<widget>.
 
-=item C<foreground> (colour scalar, default undef)
+=item C<foreground> (colour scalar, default C<undef>)
 
 The colour for the crosshair.  This can be
 
 =over 4
+
+=item *
+
+C<undef> (the default) for the widget style C<fg> foreground colour in each
+widget (see L<Gtk2::Style>).
 
 =item *
 
@@ -831,14 +844,16 @@ L<Gtk2::Gdk::Color>).
 
 =item *
 
-A C<Gtk2::Gdk::Color> object.
-
-=item *
-
-C<undef> (the default) for the widget style C<fg> foreground colour in each
-widget (see L<Gtk2::Style>).
+A C<Gtk2::Gdk::Color> object with C<red>, C<green>, C<blue> fields set.
+(A pixel value will be looked up in each widget.)
 
 =back
+
+=item C<line-width> (integer, default 0)
+
+The width in pixels of the crosshair lines.  The default 0 means 1 pixel
+wide drawn "fast".  Usually 1 pixel is enough but 2 or 3 may make the lines
+more visible on a high resolution screen.
 
 =back
 
@@ -848,35 +863,37 @@ widget (see L<Gtk2::Style>).
 
 =item moved (parameters: crosshair, widget, x, y, userdata)
 
-Emitted when the crosshair moves to the given C<$widget> and X,Y coordinates
-within that widget (widget relative coordinates).  C<$widget> is C<undef> if
-the mouse moves outside any of the crosshair widgets.
+Emitted when the crosshair moves to the given C<$widget> and at X,Y
+coordinates within that widget (widget relative coordinates).  C<$widget> is
+C<undef> if the mouse moves outside any of the crosshair widgets.
 
 It's worth noting a subtle difference in C<moved> reporting when a crosshair
 is activated from a button or from the keyboard.  A button press causes an
-implicit grab and all events are reported to that widget window.  C<moved>
-then gives that widget and an X,Y position which might be outside its window
+implicit grab and all events are reported to that widget's window.  C<moved>
+then gives that widget and an X,Y position which might be outside the window
 area (eg. negative).  But for a keyboard or programmatic start C<moved>
 reports the widget currently containing the mouse, or C<undef> when not in
 any.  Usually the button press grab is good thing, it means a dragged button
-keeps reporting about its original window.
+keeps reporting about the original window.
 
 =back
 
 =head1 BUGS
 
 C<no-window> widgets don't work properly, but instead should be put in a
-C<Gtk2::EventBox> and that passed to the crosshair.
+C<Gtk2::EventBox> or similar windowed widget and that passed to the
+crosshair.
 
 Parent window movement, including toplevel window movement, isn't noticed
 immediately, leaving the drawn crosshair away from the mouse.  The next
 mouse movement updates all widgets though, and often parent widget moves
-provoke a redraw which will update the crosshair too.
+provoke a redraw which will update the crosshair anyway.
 
-If a crosshair window is partly overlapped by another window then a keyboard
-mode start with the pointer in that other window isn't recognised as outside
-the crosshair window.  This results in an initial draw but then no updating
-until the pointer moves into the crosshaired window.
+If a crosshair widget's window is partly overlapped by another window then a
+keyboard mode start with the pointer in that other window isn't recognised
+as outside the crosshair window.  This results in an initial draw but then
+no updating until the pointer moves into the crosshaired window.  It should
+be possible to do this correctly.
 
 =head1 SEE ALSO
 

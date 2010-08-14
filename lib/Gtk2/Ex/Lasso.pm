@@ -22,6 +22,7 @@ use warnings;
 use Carp;
 use List::Util qw(min max);
 use Scalar::Util;
+use Glib::Ex::SignalIds;
 
 # 1.200 for Gtk2::GC auto-release and GDK_CURRENT_TIME
 use Gtk2 1.200;
@@ -30,7 +31,7 @@ use Gtk2::Ex::Xor;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 10;
+our $VERSION = 11;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
@@ -112,20 +113,27 @@ sub SET_PROPERTY {
     $self->{$pname} = $newval;  # per default GET_PROPERTY
     my $widget = $newval;
 
-    Scalar::Util::weaken ($self->{$pname});
+    Scalar::Util::weaken ($self->{'widget'});
+    $self->{'style_sig'} = $widget && Glib::Ex::SignalIds->new
+      ($widget,
+       $widget->signal_connect (style_set => \&_do_style_set,
+                                Gtk2::Ex::Xor::_ref_weak($self)));
+    delete $self->{'gc'}; # new colours etc in new widget
+
     $widget->add_events (['button-motion-mask',
                           'button-release-mask']);
-    delete $self->{'gc'};        # new colours etc in new widget
-    delete $self->{'style_sig'}; # on old widget
+    #     require Gtk2::Ex::WidgetEvents;
+    #     $self->{'wevents'} = Gtk2::Ex::WidgetEvents->new
+    #       ($widget,
+    #        ['button-motion-mask',
+    #         'button-release-mask']);
+
+    # preserve activeness onto new widget
     if ($active) {
       $self->start;
       # keep button number to let _do_button_release match it
       $self->{'button'} = $button;
     }
-
-    # require Gtk2::Ex::WidgetEvents;
-    # $self->{'wevents'} = Gtk2::Ex::WidgetEvents->new ($widget,
-    #                                                   ['button-motion-mask',
     return;
   }
 
@@ -142,6 +150,7 @@ sub SET_PROPERTY {
   }
 }
 
+# 'style-set' signal handler on widget
 sub _do_style_set {
   my ($widget, $prev_style, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return;
@@ -195,7 +204,6 @@ sub start {
   $self->{'dynamic_setups'} = \@dynamic;
   my $ref_weak_self = Gtk2::Ex::Xor::_ref_weak ($self);
 
-  require Glib::Ex::SignalIds;
   push @dynamic, Glib::Ex::SignalIds->new
     ($widget,
      $widget->signal_connect (motion_notify_event => \&_do_motion_notify,
@@ -212,10 +220,6 @@ sub start {
   require Gtk2::Ex::KeySnooper;
   push @dynamic, Gtk2::Ex::KeySnooper->new
     (\&_do_key_snooper, $ref_weak_self);
-
-  $self->{'style_sig'} = Glib::Ex::SignalIds->new
-    ($widget,
-     $widget->signal_connect (style_set => \&_do_style_set, $ref_weak_self));
 
   my ($x, $y) = (Scalar::Util::blessed($event) && $event->can('x')
                  ? Gtk2::Ex::Xor::_event_widget_coords ($widget, $event)
@@ -291,7 +295,7 @@ sub _update_widgetcursor {
   }
 }
 
-
+# 'expose' signal handler on widget
 sub _do_expose {
   my ($widget, $event, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
@@ -302,8 +306,8 @@ sub _do_expose {
   return 0; # Gtk2::EVENT_PROPAGATE
 }
 
-# 'motion-notify' on widget, and also called for $lasso->end if it gets a
-# button or motion event
+# 'motion-notify' signal handler on widget, and also called for $lasso->end
+# if it gets a button or motion event
 sub _do_motion_notify {
   my ($widget, $event, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
@@ -336,6 +340,7 @@ sub _do_size_allocate {
 }
 
 
+# 'button-release-event' handler on the widget
 sub _do_button_release {
   my ($widget, $event, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
@@ -402,10 +407,12 @@ sub _draw {
   my ($off_x, $off_y) = ($win != $widget->window
                          ? $win->get_position : (0, 0));
   my $gc = ($self->{'gc'} ||= do {
-    Gtk2::Ex::Xor::get_gc ($widget, $self->{'foreground'},
-                           line_width => ($self->{'line_width'} || 0),
-                           line_style => ($self->{'line_style'}
-                                          || DEFAULT_LINE_STYLE));
+    Gtk2::Ex::Xor::shared_gc (widget => $widget,
+                              foreground_xor => $self->{'foreground'},
+                              background     => 0,  # no change
+                              line_width => ($self->{'line_width'} || 0),
+                              line_style => ($self->{'line_style'}
+                                             || DEFAULT_LINE_STYLE));
   });
 
   if ($clip_region) { $gc->set_clip_region ($clip_region); }
@@ -455,6 +462,7 @@ sub _do_key_snooper {
   return 0; # Gtk2::EVENT_PROPAGATE
 }
 
+# 'grab-broken' signal handler on the widget
 sub _do_grab_broken {
   my ($widget, $event, $ref_weak_self) = @_;
   my $self = $$ref_weak_self || return 0; # Gtk2::EVENT_PROPAGATE
@@ -558,10 +566,10 @@ feedback while selecting.
         |                         |
         +-------------------------+
 
-The lasso is activated by the C<start> function (see L</FUNCTIONS> below).
-You setup your button press or keypress code to call that.  When started
-from a button the lasso is active while the button is held down, ie. a drag.
-This is the usual way, but you can also begin from a keypress, or even
+The lasso is activated by the C<start> function (see L</FUNCTIONS> below),
+normally called from your button press or keypress event handler.  When
+started from a button the lasso is active while the button is held down,
+ie. a drag.  This is usual, but you can also begin from a keypress or even
 something strange like a menu entry.
 
 The following keys are recognised while lassoing,
@@ -589,7 +597,7 @@ properties as per C<< Glib::Object->new >>.  Eg.
 
 =item C<< $lasso->start ($event) >>
 
-Start a lasso selection on C<$lasso>.  If C<$event> is a
+Start a lasso selection with C<$lasso>.  If C<$event> is a
 C<Gtk2::Gdk::Event::Button> then releasing that button ends the selection.
 For other event types or for C<undef> or omitted the selection ends only
 with the Return key or an C<end> call.
@@ -604,9 +612,9 @@ release.
 
 If you end a lasso in response to a button release, another button press, a
 motion notify, or similar, then pass the C<Gtk2::Gdk::Event> as the optional
-C<$event> parameter.  C<end> will use it for a final X,Y position, and for a
-server timestamp if ungrabbing.  This is important if event processing is a
-bit lagged.
+C<$event> parameter so that C<end> can use it for a final X,Y position and
+for a server timestamp if ungrabbing.  Both are important if event
+processing in the client is slow for any reason.
 
 =item C<< $lasso->abort () >>
 
@@ -615,7 +623,7 @@ C<$lasso> is already inactive then do nothing.  This is the user Esc key.
 
 =item C<< $lasso->swap_corners() >>
 
-Swap the mouse pointer to the opposite corner of the selection, by a "warp"
+Swap the mouse pointer to the opposite corner of the selection by a "warp"
 of the pointer (ie. a forcible movement).  This is the user Space key.
 
 =back
@@ -624,10 +632,11 @@ of the pointer (ie. a forcible movement).  This is the user Space key.
 
 =over 4
 
-=item C<widget> (a C<Gtk2::Widget>, or C<undef>)
+=item C<widget> (a C<Gtk2::Widget> or C<undef>)
 
-The target widget to act on.  This can be changed even when the lasso is
-active, though doing so stands a good chance of confusing the user.
+The target widget to act on.  This can be changed to act on a different
+widget.  It works even when the lasso is active, though changing while
+active stands a good chance of confusing the user.
 
 =item C<active> (boolean, default false)
 
@@ -636,9 +645,26 @@ same as calling C<start> or C<end> above (except you can't pass events).
 
 =item C<foreground> (scalar, default C<undef>)
 
-The foreground colour to draw the lasso.  This can be a string name
-(including hex "#RRGGBB"), a C<Gtk2::Gdk::Color> object with an allocated
-pixel value, or C<undef> for the widget's C<Gtk2::Style> foreground.
+The colour for the lasso.  This can be
+
+=over 4
+
+=item *
+
+C<undef> (the default) for the widget style C<fg> foreground colour (see
+L<Gtk2::Style>).
+
+=item *
+
+A string colour name or #RGB form per C<< Gtk2::Gdk::Color->parse >> (see
+L<Gtk2::Gdk::Color>).
+
+=item *
+
+A C<Gtk2::Gdk::Color> object with C<red>, C<green>, C<blue> fields set.
+(A pixel value is looked up for the widget in use.)
+
+=back
 
 =item C<cursor> (scalar, default C<"hand1">)
 
@@ -652,7 +678,7 @@ indication that selection has begun.  The default C<"hand1"> is meant to be
 reasonable.
 
 The cursor can be changed while the lasso is active.  Doing so is probably
-unusual, but it works, and might be used for something creative like further
+unusual but works and might be used for something creative like further
 visual feedback or maybe keeping an arrow outwards so as not to obscure the
 selected region.
 
@@ -669,14 +695,14 @@ ends).  x2,y2 is the corner with the mouse.
 
 =item C<ended>, parameters: lasso, x1, y1, x2, y2, userdata
 
-Emitted when a selection is complete and accepted by the user (as opposed to
-aborted).  x2,y2 is the corner where the mouse finished (though it's unusual
-to care which is which).
+Emitted when a selection is complete and accepted by the user (not when
+aborted).  x2,y2 is the corner where the mouse finished, though it's unusual
+to care which way around the corners are.
 
 =item C<aborted>, parameters: lasso, userdata
 
-Emitted when a region selection ends by the user wanting to abort, meaning
-basically wanting no action on the region.
+Emitted when a region selection ends by the user aborting, which normally
+means no action on any region.
 
 =back
 
@@ -693,7 +719,7 @@ When the lasso is started from a keypress etc, not a button drag, an
 explicit pointer grab is used so motion events outside the widget window are
 seen.  In the current code a further C<start> call with a button press event
 will switch to drag mode, so the corresponding release has the expected
-effect.  But maybe that's a bit obscure, so perhaps in the future this will
+effect.  But perhaps that's a bit obscure, so maybe in the future this will
 change.
 
 =head1 SEE ALSO

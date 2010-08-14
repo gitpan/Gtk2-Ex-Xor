@@ -1,6 +1,6 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
-# Copyright 2008, 2009 Kevin Ryde
+# Copyright 2008, 2009, 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -54,14 +54,16 @@ $area2->modify_fg ('normal', Gtk2::Gdk::Color->parse ('green'));
 $area2->modify_bg ('normal', Gtk2::Gdk::Color->parse ('blue'));
 $layout->put ($area2, 0, $area_height + 10);
 
-my $lasso = Gtk2::Ex::Lasso->new (widget => $area,
-                                  # cursor => 'hand1'
-                                 );
+my $lasso = Gtk2::Ex::Lasso->new
+  (widget => $area,
+   # cursor => 'hand1'
+   foreground => Gtk2::Gdk::Color->new(65535/2,0,0,0),
+  );
 $area->grab_focus;
 $area->add_events(['button-press-mask']);
 $area->signal_connect (button_press_event =>
                        sub {
-                         my ($area, $event, $userdata) = @_;
+                         my ($area, $event) = @_;
                          print "$progname: start button\n";
                          $lasso->start ($event);
                          return 0; # Gtk2::EVENT_PROPAGATE
@@ -69,7 +71,7 @@ $area->signal_connect (button_press_event =>
 $area2->add_events(['button-press-mask']);
 $area2->signal_connect (button_press_event =>
                         sub {
-                          my ($area2, $event, $userdata) = @_;
+                          my ($area2, $event) = @_;
                           print "$progname: start button in area2\n";
                           $lasso->start ($event);
                           return 0; # Gtk2::EVENT_PROPAGATE
@@ -77,13 +79,13 @@ $area2->signal_connect (button_press_event =>
 
 $area->signal_connect (button_release_event =>
                        sub {
-                         my ($area, $event, $userdata) = @_;
+                         my ($area, $event) = @_;
                          print "$progname: area1 button release\n";
                          return 0; # Gtk2::EVENT_PROPAGATE
                        });
 $area2->signal_connect (button_release_event =>
                         sub {
-                          my ($area2, $event, $userdata) = @_;
+                          my ($area2, $event) = @_;
                           print "$progname: area2 button release\n";
                           return 0; # Gtk2::EVENT_PROPAGATE
                         });

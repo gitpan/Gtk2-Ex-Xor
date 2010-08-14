@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright 2008, 2010 Kevin Ryde
+# Copyright 2010 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -21,14 +21,28 @@
 use strict;
 use warnings;
 use Gtk2 '-init';
+use Scalar::Util;
 
-my $toplevel = Gtk2::Window->new ('toplevel');
+my $toplevel = Gtk2::Window->new('toplevel');
+$toplevel->show;
 
-my $fontsel = Gtk2::FontSelection->new;
-$toplevel->add ($fontsel);
+my $win = $toplevel->window;
+my $depth = $win->get_depth;
+my $colormap = $win->get_colormap;
 
-$fontsel->set_font_name ('cursor');
-my $font = $fontsel->get_font;
-print $font;
+my $gc1;
+{
+  my $pixmap = Gtk2::Gdk::Pixmap->new ($win, 1, 1, $depth);
+  $gc1 = Gtk2::GC->get ($depth, $colormap,  {tile=>$pixmap});
+}
 
-exit 0;
+my $gc2;
+{
+  my $pixmap = Gtk2::Gdk::Pixmap->new ($win, 1, 1, $depth);
+  $gc2 = Gtk2::GC->get ($depth, $colormap,  {tile=>$pixmap});
+  Scalar::Util::weaken ($pixmap);
+  print $pixmap,"\n";
+}
+
+print "$gc1\n";
+print "$gc2\n";
