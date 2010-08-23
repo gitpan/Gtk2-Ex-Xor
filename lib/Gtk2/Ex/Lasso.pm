@@ -31,7 +31,7 @@ use Gtk2::Ex::Xor;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 11;
+our $VERSION = 12;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
@@ -120,13 +120,11 @@ sub SET_PROPERTY {
                                 Gtk2::Ex::Xor::_ref_weak($self)));
     delete $self->{'gc'}; # new colours etc in new widget
 
-    $widget->add_events (['button-motion-mask',
-                          'button-release-mask']);
-    #     require Gtk2::Ex::WidgetEvents;
-    #     $self->{'wevents'} = Gtk2::Ex::WidgetEvents->new
-    #       ($widget,
-    #        ['button-motion-mask',
-    #         'button-release-mask']);
+    require Gtk2::Ex::WidgetEvents;
+    $self->{'wevents'} = Gtk2::Ex::WidgetEvents->new
+      ($widget,
+       ['button-motion-mask',
+        'button-release-mask']);
 
     # preserve activeness onto new widget
     if ($active) {

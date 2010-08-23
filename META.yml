@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Gtk2-Ex-Xor
-version:            11
+version:            12
 abstract:           Helpers for Gtk2 widgets.
 author:
     - Kevin Ryde <user42@zip.com.au>
@@ -18,6 +18,7 @@ requires:
     Gtk2::Ex::SyncCall:   12
     Gtk2::Ex::WidgetBits:  0
     Gtk2::Ex::WidgetCursor:  5
+    Gtk2::Ex::WidgetEvents:  21
     perl:                 5.008
     Scalar::Util:         1.18
     Tie::RefHash::Weak:   0.05

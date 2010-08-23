@@ -28,7 +28,7 @@ BEGIN { MyTestHelpers::nowarnings() }
 
 require Gtk2::Ex::CrossHair;
 
-my $want_version = 11;
+my $want_version = 12;
 cmp_ok ($Gtk2::Ex::CrossHair::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::CrossHair->VERSION,  '>=', $want_version,

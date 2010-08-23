@@ -44,8 +44,8 @@ MyMakeMakerExtras::WriteMakefile
                     # my Gtk2-Ex-WidgetBits
                     'Gtk2::Ex::WidgetBits' => 0,
                     'Gtk2::Ex::KeySnooper' => 0,
-                    # version 12 for gtk XID workaround
-                    'Gtk2::Ex::SyncCall' => 12,
+                    'Gtk2::Ex::SyncCall' => 12,     # v.12 for XID workaround
+                    'Gtk2::Ex::WidgetEvents' => 21, # new in v.21
 
                     # optional for Lasso but mandatory for CrossHair
                     # version 5 for weakening fixes
@@ -63,21 +63,21 @@ MyMakeMakerExtras::WriteMakefile
    => { resources
         => { homepage => 'http://user42.tuxfamily.org/gtk2-ex-xor/index.html' },
         optional_features
-        => { 
-#             maximum_tests
-#              => { description => 'Have "make test" do as much as possible.',
-#                   requires => { 
-#                               },
-#                 },
-             maximum_devel
-             => { description => 'Stuff used variously for development.',
-                  requires => { 'Gtk2::Ex::Dragger'    => 0,
-                                'Gtk2::Ex::TickerView' => 0,
-                                'Devel::FindRef'       => 0,
-                                'Devel::StackTrace'    => '1.19',
-                                'Goo::Canvas'          => 0,
-                                'Gnome2::Canvas'       => 0,
-                              } },
+        => {
+            #             maximum_tests
+            #              => { description => 'Have "make test" do as much as possible.',
+            #                   requires => {
+            #                               },
+            #                 },
+            maximum_devel
+            => { description => 'Stuff used variously for development.',
+                 requires => { 'Gtk2::Ex::Dragger'    => 0,
+                               'Gtk2::Ex::TickerView' => 0,
+                               'Devel::FindRef'       => 0,
+                               'Devel::StackTrace'    => '1.19',
+                               'Goo::Canvas'          => 0,
+                               'Gnome2::Canvas'       => 0,
+                             } },
            },
 
         # use of "package Gtk2::Bin" adding a private method

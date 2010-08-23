@@ -28,7 +28,7 @@ BEGIN { MyTestHelpers::nowarnings() }
 
 require Gtk2::Ex::Xor;
 
-my $want_version = 11;
+my $want_version = 12;
 cmp_ok ($Gtk2::Ex::Xor::VERSION, '>=', $want_version,
         'VERSION variable');
 cmp_ok (Gtk2::Ex::Xor->VERSION,  '>=', $want_version,

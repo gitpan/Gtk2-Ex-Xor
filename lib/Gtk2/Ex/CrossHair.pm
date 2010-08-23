@@ -33,7 +33,7 @@ use Gtk2::Ex::WidgetBits;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 11;
+our $VERSION = 12;
 
 # In each CrossHair the private fields are
 #
@@ -238,27 +238,22 @@ sub _pw_new {
   # and it happens before we change the event mask.
   #
   # 'exposure-mask' is not here since if nothing else is drawing then
-  # there's no need for us to redraw over its changes.
+  # there's no need for the crosshair to redraw over its changes.
 
-  $widget->add_events(['button-motion-mask',
-                       'button-release-mask',
-                       'pointer-motion-mask',
-                       'enter-notify-mask',
-                       'leave-notify-mask']);
-  #   require Gtk2::Ex::WidgetEvents;
-  #   my $wevents = Gtk2::Ex::WidgetEvents->new
-  #     ($widget, ['button-motion-mask',
-  #                'button-release-mask',
-  #                'pointer-motion-mask',
-  #                'enter-notify-mask',
-  #                'leave-notify-mask']);
+  require Gtk2::Ex::WidgetEvents;
+  my $wevents = Gtk2::Ex::WidgetEvents->new
+    ($widget, ['button-motion-mask',
+               'button-release-mask',
+               'pointer-motion-mask',
+               'enter-notify-mask',
+               'leave-notify-mask']);
 
   my $ref_weak_self = Gtk2::Ex::Xor::_ref_weak ($self);
   $self->{'perwidget'}->{refaddr($widget)}
-    = { # wevents => $wevents,
-       static_ids => Glib::Ex::SignalIds->new
-       ($widget, $widget->signal_connect (style_set => \&_do_style_set,
-                                          $ref_weak_self)),
+    = { wevents => $wevents,
+        static_ids => Glib::Ex::SignalIds->new
+        ($widget, $widget->signal_connect (style_set => \&_do_style_set,
+                                           $ref_weak_self)),
       };
 
   if ($self->{'active'}) {
