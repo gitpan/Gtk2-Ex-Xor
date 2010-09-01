@@ -42,21 +42,22 @@ require Gtk2;
 Gtk2->init_check
   or plan skip_all => 'due to no DISPLAY available';
 
+my $widget = MyOverloadWidget->new;
+if (eval { my $x = $widget+0; 1 }) {
+  plan skip_all => 'somehow overloaded widget+0 no error, maybe perl 5.8.3 badness';
+}
+
 plan tests => 2;
 
-{
-  my $widget = MyOverloadWidget->new;
-  ok (! eval { my $x = $widget+0; 1 },
-      'widget+0 throws error');
+isa_ok ($widget, 'MyOverloadWidget');
 
-  my $toplevel = Gtk2::Window->new;
-  $toplevel->add ($widget);
-  $toplevel->show_all;
+my $toplevel = Gtk2::Window->new;
+$toplevel->add ($widget);
+$toplevel->show_all;
 
-  my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
+my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
 
-  $toplevel->destroy;
-  ok (1);
-}
+$toplevel->destroy;
+ok (1, 'CrossHair on widget with overloaded + operator');
 
 exit 0;

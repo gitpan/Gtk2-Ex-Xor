@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Gtk2-Ex-Xor
-version:            12
+version:            13
 abstract:           Helpers for Gtk2 widgets.
 author:
     - Kevin Ryde <user42@zip.com.au>

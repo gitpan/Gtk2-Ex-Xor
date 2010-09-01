@@ -28,11 +28,9 @@ BEGIN { MyTestHelpers::nowarnings() }
 
 require Gtk2::Ex::Xor;
 
-my $want_version = 12;
-cmp_ok ($Gtk2::Ex::Xor::VERSION, '>=', $want_version,
-        'VERSION variable');
-cmp_ok (Gtk2::Ex::Xor->VERSION,  '>=', $want_version,
-        'VERSION class method');
+my $want_version = 13;
+is ($Gtk2::Ex::Xor::VERSION, $want_version, 'VERSION variable');
+is (Gtk2::Ex::Xor->VERSION,  $want_version, 'VERSION class method');
 { ok (eval { Gtk2::Ex::Xor->VERSION($want_version); 1 },
       "VERSION class check $want_version");
   my $check_version = $want_version + 1000;
