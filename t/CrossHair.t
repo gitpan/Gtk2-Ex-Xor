@@ -20,7 +20,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 19;
+use Test::More;
 
 use lib 't';
 use MyTestHelpers;
@@ -28,7 +28,12 @@ BEGIN { MyTestHelpers::nowarnings() }
 
 require Gtk2::Ex::CrossHair;
 
-my $want_version = 13;
+require Gtk2;
+Gtk2->init_check
+  or plan skip_all => 'due to no DISPLAY available';
+plan tests => 23;
+
+my $want_version = 14;
 is ($Gtk2::Ex::CrossHair::VERSION, $want_version, 'VERSION variable');
 is (Gtk2::Ex::CrossHair->VERSION,  $want_version, 'VERSION class method');
 { ok (eval { Gtk2::Ex::CrossHair->VERSION($want_version); 1 },
@@ -46,9 +51,6 @@ is (Gtk2::Ex::CrossHair->VERSION,  $want_version, 'VERSION class method');
   ok (! eval { $cross->VERSION($check_version); 1 },
       "VERSION object check $check_version");
 }
-
-require Gtk2;
-MyTestHelpers::glib_gtk_versions();
 
 # return an arrayref
 sub leftover_fields {
@@ -88,197 +90,198 @@ sub show_wait {
 
 #-----------------------------------------------------------------------------
 
+require Gtk2;
+MyTestHelpers::glib_gtk_versions();
+
+# setting 'widget' notifies 'widgets' too
+{
+  my $widget = Gtk2::Window->new ('toplevel');
+  my $cross = Gtk2::Ex::CrossHair->new;
+
+  my $seen_widget = 0;
+  my $seen_widgets = 0;
+  $cross->signal_connect ('notify::widget'  => sub { $seen_widget++; });
+  $cross->signal_connect ('notify::widgets' => sub { $seen_widgets++; });
+
+  $cross->set (widget => $widget);
+  is ($seen_widget,  1, 'notify widget');
+  is ($seen_widgets, 1, 'notify widgets');
+  $widget->destroy;
+}
+
+# setting 'widgets' notifies 'widget' too
+{
+  my $widget = Gtk2::Window->new ('toplevel');
+  my $cross = Gtk2::Ex::CrossHair->new;
+
+  my $seen_widget = 0;
+  my $seen_widgets = 0;
+  $cross->signal_connect ('notify::widget'  => sub { $seen_widget++; });
+  $cross->signal_connect ('notify::widgets' => sub { $seen_widgets++; });
+
+  $cross->set (widgets => [$widget]);
+  is ($seen_widget,  1, 'notify widget');
+  is ($seen_widgets, 1, 'notify widgets');
+  $widget->destroy;
+}
+
+
+# destroyed when weakened empty
+{
+  my $cross = Gtk2::Ex::CrossHair->new;
+  my $weak_cross = $cross;
+  require Scalar::Util;
+  Scalar::Util::weaken ($weak_cross);
+  undef $cross;
+  is ($weak_cross, undef, 'weaken empty - destroyed');
+  if (defined &explain) { diag explain $weak_cross; }
+  if ($weak_cross) { MyTestHelpers::findrefs ($weak_cross); }
+}
+
+# destroyed when weakened on unrealized
+{
+  my $widget = Gtk2::Window->new ('toplevel');
+  my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
+  my $weak_cross = $cross;
+  require Scalar::Util;
+  Scalar::Util::weaken ($weak_cross);
+  undef $cross;
+  MyTestHelpers::main_iterations();
+  is ($weak_cross, undef, 'weaken unrealized - destroyed');
+  if (defined &explain) {
+    diag explain $widget;
+    diag explain $weak_cross;
+  }
+  if ($weak_cross) {
+    MyTestHelpers::findrefs ($weak_cross);
+  }
+  is_deeply (leftover_fields($widget), [],
+             'weaken unrealized - no CrossHair data left behind');
+  $widget->destroy;
+}
+
+# destroyed when weakened on realized
+{
+  my $widget = Gtk2::Window->new ('toplevel');
+  $widget->realize;
+  my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
+  my $weak_cross = $cross;
+  Scalar::Util::weaken ($weak_cross);
+  $cross = undef;
+  is ($weak_cross, undef, 'weaken realized - destroyed');
+  is_deeply (leftover_fields($widget), [],
+             'weaken realized - no CrossHair data left behind');
+  $widget->destroy;
+}
+
+# destroyed when weakened on active
 SKIP: {
-  require Gtk2;
-  Gtk2->disable_setlocale;  # leave LC_NUMERIC alone for version nums
-  if (! Gtk2->init_check) { skip 'due to no DISPLAY available', 12; }
+  Gtk2::Gdk::Display->can('warp_pointer')
+      or skip 'no display->warp_pointer(), per Gtk before 2.8', 3;
 
-  # setting 'widget' notifies 'widgets' too
-  {
-    my $widget = Gtk2::Window->new ('toplevel');
-    my $cross = Gtk2::Ex::CrossHair->new;
-    
-    my $seen_widget = 0;
-    my $seen_widgets = 0;
-    $cross->signal_connect ('notify::widget'  => sub { $seen_widget++; });
-    $cross->signal_connect ('notify::widgets' => sub { $seen_widgets++; });
+  my $widget = Gtk2::Window->new ('toplevel');
+  $widget->set_size_request (100, 100);
+  show_wait ($widget);
 
-    $cross->set (widget => $widget);
-    is ($seen_widget,  1, 'notify widget');
-    is ($seen_widgets, 1, 'notify widgets');
-    $widget->destroy;
-  }
+  # temporary warp to have mouse pointer within $widget
+  my $display = $widget->get_display;
+  my ($screen,$x,$y) = $display->get_pointer;
+  my ($widget_x,$widget_y) = $widget->window->get_origin;
+  $display->warp_pointer($widget->get_screen,$widget_x+50,$widget_y+50);
 
-  # setting 'widgets' notifies 'widget' too
-  {
-    my $widget = Gtk2::Window->new ('toplevel');
-    my $cross = Gtk2::Ex::CrossHair->new;
-    
-    my $seen_widget = 0;
-    my $seen_widgets = 0;
-    $cross->signal_connect ('notify::widget'  => sub { $seen_widget++; });
-    $cross->signal_connect ('notify::widgets' => sub { $seen_widgets++; });
+  is_deeply (leftover_fields($widget), [],
+             'weaken active - initially no CrossHair data');
 
-    $cross->set (widgets => [$widget]);
-    is ($seen_widget,  1, 'notify widget');
-    is ($seen_widgets, 1, 'notify widgets');
-    $widget->destroy;
-  }
+  my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
+  $cross->start;
+  # sync and iterate to make the cross draw and use its gc
+  $display->sync;
+  MyTestHelpers::main_iterations();
 
-
-  # destroyed when weakened empty
-  {
-    my $cross = Gtk2::Ex::CrossHair->new;
-    my $weak_cross = $cross;
-    require Scalar::Util;
-    Scalar::Util::weaken ($weak_cross);
-    undef $cross;
-    is ($weak_cross, undef, 'weaken empty - destroyed');
+  my $weak_cross = $cross;
+  Scalar::Util::weaken ($weak_cross);
+  $cross = undef;
+  MyTestHelpers::main_iterations();
+  is ($weak_cross, undef, 'weaken active - destroyed');
+  if ($weak_cross) {
     if (defined &explain) { diag explain $weak_cross; }
-    if ($weak_cross) { MyTestHelpers::findrefs ($weak_cross); }
+    MyTestHelpers::findrefs ($weak_cross);
   }
+  is_deeply (leftover_fields($widget), [],
+             'weaken active - no CrossHair data left behind');
 
-  # destroyed when weakened on unrealized
-  {
-    my $widget = Gtk2::Window->new ('toplevel');
-    my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
-    my $weak_cross = $cross;
-    require Scalar::Util;
-    Scalar::Util::weaken ($weak_cross);
-    undef $cross;
-    MyTestHelpers::main_iterations();
-    is ($weak_cross, undef, 'weaken unrealized - destroyed');
-    if (defined &explain) {
-      diag explain $widget;
-      diag explain $weak_cross;
-    }
-    if ($weak_cross) {
-      MyTestHelpers::findrefs ($weak_cross);
-    }
-    is_deeply (leftover_fields($widget), [],
-               'weaken unrealized - no CrossHair data left behind');
+  $widget->destroy;
+  $display->warp_pointer($screen,$x,$y);
+}
+
+# start() emits "notify::active"
+{
+  my $widget = Gtk2::Window->new ('toplevel');
+  $widget->realize;
+  my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
+  my $seen_notify = 0;
+  $cross->signal_connect ('notify::active' => sub { $seen_notify = 1; });
+  $cross->start;
+  is ($seen_notify, 1, 'start() emits notify::active');
+  $widget->destroy;
+}
+
+# end() emits "notify::active"
+{
+  my $widget = Gtk2::Window->new ('toplevel');
+  $widget->realize;
+  my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
+  $cross->start;
+  my $seen_notify = 0;
+  $cross->signal_connect ('notify::active' => sub { $seen_notify = 1; });
+  $cross->end;
+  is ($seen_notify, 1, 'end() emits notify::active');
     $widget->destroy;
   }
 
-  # destroyed when weakened on realized
-  {
-    my $widget = Gtk2::Window->new ('toplevel');
-    $widget->realize;
-    my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
-    my $weak_cross = $cross;
-    Scalar::Util::weaken ($weak_cross);
-    $cross = undef;
-    is ($weak_cross, undef, 'weaken realized - destroyed');
-    is_deeply (leftover_fields($widget), [],
-               'weaken realized - no CrossHair data left behind');
-    $widget->destroy;
+# leftovers on changing widget, and switching to a widget without a common
+# ancestor with the previous
+SKIP: {
+  Gtk2::Gdk::Display->can('warp_pointer')
+      or skip 'no display->warp_pointer(), per Gtk before 2.8', 2;
+
+  my $widget = Gtk2::Window->new ('toplevel');
+  my $widget2 = Gtk2::Window->new ('toplevel');
+  $widget->set_size_request (100, 100);
+  show_wait ($widget);
+  show_wait ($widget2);
+
+  # temporary warp to have mouse pointer within $widget
+  my $display = $widget->get_display;
+  my ($screen,$x,$y) = $display->get_pointer;
+  my ($widget_x,$widget_y) = $widget->window->get_origin;
+  $display->warp_pointer($widget->get_screen,$widget_x+50,$widget_y+50);
+
+  my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
+  $cross->start;
+  # sync and iterate to make the cross draw and use its gc
+  $display->sync;
+  MyTestHelpers::main_iterations();
+
+  $cross->set (widget => $widget2);
+  ($widget_x,$widget_y) = $widget2->window->get_origin;
+  $display->warp_pointer($widget2->get_screen,$widget_x+50,$widget_y+50);
+  $display->sync;
+  MyTestHelpers::main_iterations();
+
+  if (defined &explain) {
+    diag explain $widget;
   }
+  is_deeply (leftover_fields($widget), [],
+             'change widget - no CrossHair data left behind');
 
-  # destroyed when weakened on active
-  {
-    my $widget = Gtk2::Window->new ('toplevel');
-    $widget->set_size_request (100, 100);
-    show_wait ($widget);
+  $cross->set (widgets => []);
+  is_deeply (leftover_fields($widget2), [],
+             'change to no widgets - no CrossHair data left behind');
 
-    # temporary warp to have mouse pointer within $widget
-    my $display = $widget->get_display;
-    my ($screen,$x,$y) = $display->get_pointer;
-    my ($widget_x,$widget_y) = $widget->window->get_origin;
-    $display->warp_pointer($widget->get_screen,$widget_x+50,$widget_y+50);
-
-    is_deeply (leftover_fields($widget), [],
-               'weaken active - initially no CrossHair data');
-
-    my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
-    $cross->start;
-    # sync and iterate to make the cross draw and use its gc
-    $display->sync;
-    MyTestHelpers::main_iterations();
-
-    my $weak_cross = $cross;
-    Scalar::Util::weaken ($weak_cross);
-    $cross = undef;
-    MyTestHelpers::main_iterations();
-    is ($weak_cross, undef, 'weaken active - destroyed');
-    if ($weak_cross) {
-      if (defined &explain) { diag explain $weak_cross; }
-      MyTestHelpers::findrefs ($weak_cross);
-    }
-    is_deeply (leftover_fields($widget), [],
-               'weaken active - no CrossHair data left behind');
-
-    $widget->destroy;
-    $display->warp_pointer($screen,$x,$y);
-    exit 0;
-  }
-
-  # start() emits "notify::active"
-  {
-    my $widget = Gtk2::Window->new ('toplevel');
-    $widget->realize;
-    my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
-    my $seen_notify = 0;
-    $cross->signal_connect ('notify::active' => sub { $seen_notify = 1; });
-    $cross->start;
-    is ($seen_notify, 1, 'start() emits notify::active');
-    $widget->destroy;
-  }
-
-  # end() emits "notify::active"
-  {
-    my $widget = Gtk2::Window->new ('toplevel');
-    $widget->realize;
-    my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
-    $cross->start;
-    my $seen_notify = 0;
-    $cross->signal_connect ('notify::active' => sub { $seen_notify = 1; });
-    $cross->end;
-    is ($seen_notify, 1, 'end() emits notify::active');
-    $widget->destroy;
-  }
-
-  # leftovers on changing widget, and switching to a widget without a common
-  # ancestor with the previous
-  {
-    my $widget = Gtk2::Window->new ('toplevel');
-    my $widget2 = Gtk2::Window->new ('toplevel');
-    $widget->set_size_request (100, 100);
-    show_wait ($widget);
-    show_wait ($widget2);
-
-    # temporary warp to have mouse pointer within $widget
-    my $display = $widget->get_display;
-    my ($screen,$x,$y) = $display->get_pointer;
-    my ($widget_x,$widget_y) = $widget->window->get_origin;
-    $display->warp_pointer($widget->get_screen,$widget_x+50,$widget_y+50);
-
-    my $cross = Gtk2::Ex::CrossHair->new (widget => $widget);
-    $cross->start;
-    # sync and iterate to make the cross draw and use its gc
-    $display->sync;
-    MyTestHelpers::main_iterations();
-
-    $cross->set (widget => $widget2);
-    ($widget_x,$widget_y) = $widget2->window->get_origin;
-    $display->warp_pointer($widget2->get_screen,$widget_x+50,$widget_y+50);
-    $display->sync;
-    MyTestHelpers::main_iterations();
-
-    if (defined &explain) {
-      diag explain $widget;
-    }
-    is_deeply (leftover_fields($widget), [],
-               'change widget - no CrossHair data left behind');
-
-    $cross->set (widgets => []);
-    is_deeply (leftover_fields($widget2), [],
-               'change to no widgets - no CrossHair data left behind');
-
-    $widget->destroy;
-    $widget2->destroy;
-    $display->warp_pointer($screen,$x,$y);
-  }
-
+  $widget->destroy;
+  $widget2->destroy;
+  $display->warp_pointer($screen,$x,$y);
 }
 
 exit 0;

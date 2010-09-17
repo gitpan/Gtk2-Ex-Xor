@@ -28,7 +28,7 @@ BEGIN { MyTestHelpers::nowarnings() }
 
 require Gtk2::Ex::Lasso;
 
-my $want_version = 13;
+my $want_version = 14;
 is ($Gtk2::Ex::Lasso::VERSION, $want_version, 'VERSION variable');
 is (Gtk2::Ex::Lasso->VERSION,  $want_version, 'VERSION class method');
 { ok (eval { Gtk2::Ex::Lasso->VERSION($want_version); 1 },

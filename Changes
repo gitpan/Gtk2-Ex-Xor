@@ -17,6 +17,10 @@ along with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
+Version 14, August 2010
+    - Lasso no swap corners before Gtk 2.8
+    - tests CrossHair allow for no warp_pointer() before Gtk 2.8
+
 Version 13, August 2010
     - tests allow for perl 5.8.x overload.pm not working on widgets
 

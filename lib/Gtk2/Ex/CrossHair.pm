@@ -33,7 +33,7 @@ use Gtk2::Ex::WidgetBits;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 13;
+our $VERSION = 14;
 
 # In each CrossHair the private fields are
 #

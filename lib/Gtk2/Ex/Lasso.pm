@@ -31,7 +31,7 @@ use Gtk2::Ex::Xor;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 13;
+our $VERSION = 14;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
@@ -425,6 +425,11 @@ sub swap_corners {
   my ($self) = @_;
   if (! $self->{'active'}) { return; }
 
+  my $widget = $self->{'widget'};
+  if (! Gtk2::Gdk::Display->can('warp_pointer')) {
+    return;
+  }
+
   my $x1 = $self->{'x1'};
   my $y1 = $self->{'y1'};
   _maybe_move ($self,
@@ -432,7 +437,7 @@ sub swap_corners {
                $self->{'x1'}, $self->{'y1'});
 
   require Gtk2::Ex::WidgetBits;
-  Gtk2::Ex::WidgetBits::warp_pointer ($self->{'widget'}, $x1, $y1);
+  Gtk2::Ex::WidgetBits::warp_pointer ($widget, $x1, $y1);
 }
 
 
@@ -578,7 +583,7 @@ The following keys are recognised while lassoing,
 
 Other keys are propagated to normal processing.  The space to "swap" lets
 you move the initial corner if you didn't start at the right spot or change
-your mind.
+your mind.  (This swap is only possible in Gtk 2.8 and up.)
 
 =head1 FUNCTIONS
 
@@ -623,6 +628,9 @@ C<$lasso> is already inactive then do nothing.  This is the user Esc key.
 
 Swap the mouse pointer to the opposite corner of the selection by a "warp"
 of the pointer (ie. a forcible movement).  This is the user Space key.
+
+For Gtk 2.6 and earlier there's no warp available and currently this method
+does nothing there.
 
 =back
 
