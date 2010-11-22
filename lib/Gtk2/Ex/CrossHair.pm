@@ -28,12 +28,12 @@ use POSIX ();
 use Gtk2 1.200;
 use Glib::Ex::SignalIds;
 use Gtk2::Ex::Xor;
-use Gtk2::Ex::WidgetBits;
+use Gtk2::Ex::WidgetBits 31; # v.31 for xy_root_to_widget()
 
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 14;
+our $VERSION = 15;
 
 # In each CrossHair the private fields are
 #
@@ -510,7 +510,7 @@ sub _draw {
       ### establish draw position: "$widget", $root_x, $root_y
       @{$pw}{'x','y'}
         = (defined $root_x
-           ? _translate_coordinates_root_to_widget ($widget, $root_x, $root_y)
+           ? Gtk2::Ex::WidgetBits::xy_root_to_widget ($widget, $root_x, $root_y)
            : ());
       ### at: $pw->{'x'}, $pw->{'y'}
     }
@@ -608,7 +608,7 @@ sub _event_root_coords {
 #
 sub _widget_contains_root_xy {
   my ($widget, $root_x, $root_y) = @_;
-  my ($wx, $wy) = _translate_coordinates_root_to_widget ($widget, $root_x, $root_y)
+  my ($wx, $wy) = Gtk2::Ex::WidgetBits::xy_root_to_widget ($widget, $root_x, $root_y)
     or return 0;  # $widget unrealized
   return _widget_contains_xy ($widget, $wx, $wy);
 }
@@ -626,18 +626,6 @@ sub _widget_contains_xy {
             $x < $alloc->width && $y < $alloc->height });
 }
 
-sub _translate_coordinates_root_to_widget {
-  my ($widget, $root_x, $root_y) = @_;
-  ### _translate_coordinates_root_to_widget(): "$widget", $root_x, $root_y
-  my ($x, $y) = Gtk2::Ex::WidgetBits::get_root_position ($widget);
-  if (! defined $x) {
-    ### widget unrealized
-    return;
-  } else {
-    return ($root_x - $x, $root_y - $y);
-  }
-}
-
 # sub _rect_contains_xy {
 #   my ($rect, $x) = @_;
 #   return ($rect->x <= $x
@@ -646,7 +634,7 @@ sub _translate_coordinates_root_to_widget {
 #           && $rect->y + $rect->height >= $y);
 # }
 
-# sub _translate_coordinates_widget_to_root {
+# sub _xy_widget_to_root {
 #   my ($widget, $x, $y) = @_;
 #   my ($root_x, $root_y) = Gtk2::Ex::WidgetBits::get_root_position ($widget);
 #   if (! defined $root_x) {
@@ -694,15 +682,11 @@ sub _translate_coordinates_root_to_widget {
 #                    DEFAULT_LINE_STYLE,
 #                    Glib::G_PARAM_READWRITE),
 #
-#
-# =item C<line_width> (default 0 thin line)
-#
 # =item C<line_style> (default C<on-off-dash>)
 #
 # Attributes for the graphics context (C<Gtk2::Gdk::GC>) used to draw.  New
 # settings here only take effect on the next C<start>.  For example,
 #
-#     $crosshair->{'line_width'} = 3;
 #     $crosshair->{'line_style'} = 'solid';
 
 
@@ -846,9 +830,9 @@ A C<Gtk2::Gdk::Color> object with C<red>, C<green>, C<blue> fields set.
 
 =item C<line-width> (integer, default 0)
 
-The width in pixels of the crosshair lines.  The default 0 means 1 pixel
-wide drawn "fast".  Usually 1 pixel is enough but 2 or 3 may make the lines
-more visible on a high resolution screen.
+The width in pixels of the crosshair lines.  The default 0 means a 1-pixel
+"fast" line.  Usually 1 pixel is enough but 2 or 3 may make the lines more
+visible on a high resolution screen.
 
 =back
 

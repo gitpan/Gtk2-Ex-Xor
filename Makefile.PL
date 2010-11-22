@@ -42,8 +42,8 @@ MyMakeMakerExtras::WriteMakefile
                     'Glib::Ex::SignalIds' => 0,
 
                     # my Gtk2-Ex-WidgetBits
-                    'Gtk2::Ex::WidgetBits' => 0,
-                    'Gtk2::Ex::KeySnooper' => 0,
+                    'Gtk2::Ex::WidgetBits' => 31,
+                    'Gtk2::Ex::KeySnooper' => 3,    # new in v.3
                     'Gtk2::Ex::SyncCall' => 12,     # v.12 for XID workaround
                     'Gtk2::Ex::WidgetEvents' => 21, # new in v.21
 

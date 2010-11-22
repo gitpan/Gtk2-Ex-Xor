@@ -25,14 +25,17 @@ devel/lasso-screenshot.pl
 devel/lasso.pl
 devel/layout.pl
 devel/misc.pl
+devel/properties.pl
 devel/textview.pl
 devel/ticker.pl
 devel/unused.pl
 devel/viviani.pl
+devel/Xor-class.pm
 examples/cross-area.pl
 examples/cross-label.pl
 examples/cross-textview.pl
 examples/lasso-area.pl
+examples/lasso-builder.pl
 inc/my_pod2html
 inc/MyMakeMakerExtras.pm
 junk/canvas.pl

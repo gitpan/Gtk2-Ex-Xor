@@ -31,12 +31,12 @@ use Gtk2::Ex::Xor;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 14;
+our $VERSION = 15;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
 use Glib::Object::Subclass
-  Glib::Object::,
+  'Glib::Object',
   signals => { moved   => { param_types => [ 'Glib::Int',
                                              'Glib::Int',
                                              'Glib::Int',
@@ -61,7 +61,7 @@ use Glib::Object::Subclass
                   ('active',
                    'active',
                    'True if lassoing is being drawn, moved, etc.',
-                   0,
+                   0, # default
                    Glib::G_PARAM_READWRITE),
 
                   Glib::ParamSpec->scalar
@@ -181,7 +181,7 @@ sub start {
        ['pointer-motion-mask', 'button-release-mask'],
        undef,  # no confine window
        undef,  # cursor
-       _event_time($event));
+       _event_time_maybe($event));
     ### pointer_grab: $status
     if ($status eq 'success') {
       $self->{'grabbed'} = 1;
@@ -271,7 +271,7 @@ sub _end {
   }
   if (delete $self->{'grabbed'}) {
     ### ungrab
-    Gtk2::Gdk->pointer_ungrab (_event_time ($event));
+    Gtk2::Gdk->pointer_ungrab (_event_time_maybe ($event));
   }
 }
 
@@ -318,11 +318,11 @@ sub _do_motion_notify {
 
 # 'size-allocate' signal on the widget.
 #
-# The effect of _maybe_move() is to re-constrain the x1,y1 position, in case
+# The effect of _maybe_move() is to re-clamp the x1,y1 position, in case
 # it's now outside the allocated area, and to recheck the pointer position
 # at x2,y2 in case it's now outside, or now back inside, the allocated area
 #
-# x1,y1 is not moved (only reconstrained), so if $widget moves then that
+# x1,y1 is not moved (only reclamped), so if $widget moves then that
 # x1,y1 stays at the same position relative to the widget top-left 0,0.
 # There's probably other sensible things to do with it, like anchor to a
 # different edge, or a proportion of the size, etc, but a widget move during
@@ -354,8 +354,8 @@ sub _maybe_move {
   my ($self, $x1,$y1, $x2,$y2) = @_;
   my $widget = $self->{'widget'};
 
-  ($x1,$y1) = _widget_constrain_coords ($widget, $x1,$y1);
-  ($x2,$y2) = _widget_constrain_coords ($widget, $x2,$y2);
+  ($x1,$y1) = _widget_constrain_xy ($widget, $x1,$y1);
+  ($x2,$y2) = _widget_constrain_xy ($widget, $x2,$y2);
 
   if (   $x1 == $self->{'x1'}
          && $y1 == $self->{'y1'}
@@ -407,16 +407,18 @@ sub _draw {
   my $gc = ($self->{'gc'} ||= do {
     Gtk2::Ex::Xor::shared_gc (widget => $widget,
                               foreground_xor => $self->{'foreground'},
-                              background     => 0,  # no change
+                              background_xor => 0,  # no change
                               line_width => ($self->{'line_width'} || 0),
                               line_style => ($self->{'line_style'}
                                              || DEFAULT_LINE_STYLE));
   });
 
   if ($clip_region) { $gc->set_clip_region ($clip_region); }
-  _draw_rectangle_corners ($win, $gc, 0,
-                           $self->{'x1'} - $off_x, $self->{'y1'} - $off_y,
-                           $self->{'x2'} - $off_x, $self->{'y2'} - $off_y);
+  _gdkdrawable_draw_rectangle_corners
+    ($win, $gc,
+     0, # unfilled
+     $self->{'x1'} - $off_x, $self->{'y1'} - $off_y,
+     $self->{'x2'} - $off_x, $self->{'y2'} - $off_y);
   if ($clip_region) { $gc->set_clip_region (undef); }
   $self->{'drawn'} = 1;
 }
@@ -492,7 +494,7 @@ sub _do_grab_broken {
 # generic helpers
 
 # Draw a rectangle with corners at $x1,$y1 and $x2,$y2.
-sub _draw_rectangle_corners {
+sub _gdkdrawable_draw_rectangle_corners {
   my ($drawable, $gc, $filled, $x1,$y1, $x2,$y2) = @_;
   #### draw rect: "$x1,$y1 - $x2,$y2"
   $drawable->draw_rectangle ($gc, $filled,
@@ -501,7 +503,7 @@ sub _draw_rectangle_corners {
                              abs ($y1 - $y2) + ($filled ? 1 : 0));
 }
 
-sub _widget_constrain_coords {
+sub _widget_constrain_xy {
   my ($widget, $x, $y) = @_;
   my $alloc = $widget->allocation;
   return (max (0, min ($alloc->width-1,  $x)),
@@ -510,7 +512,7 @@ sub _widget_constrain_coords {
 
 # $window->get_size is the most recent configure-event report, it doesn't
 # make a server round-trip
-sub _window_constrain_coords {
+sub _window_constrain_xy {
   my ($window, $x, $y) = @_;
   my ($width, $height) = $window->get_size;
   return (max (0, min ($width-1,  $x)),
@@ -519,7 +521,7 @@ sub _window_constrain_coords {
 
 # Return a server timestamp from $event, if it's not undef and if it's an
 # event type which has a timestamp.
-sub _event_time {
+sub _event_time_maybe {
   my ($event) = @_;
   if (Scalar::Util::blessed($event) && $event->can('time')) {
     return $event->time;
@@ -570,10 +572,10 @@ feedback while selecting.
         +-------------------------+
 
 The lasso is activated by the C<start> function (see L</FUNCTIONS> below),
-normally called from your button press or keypress event handler.  When
-started from a button the lasso is active while the button is held down,
-ie. a drag.  This is usual, but you can also begin from a keypress or even
-something strange like a menu entry.
+normally called from a button press or keypress event handler.  When started
+from a button the lasso is active while the button is held down, ie. a drag.
+This is usual, but it can also begin from a keypress or even something
+strange like a menu entry.
 
 The following keys are recognised while lassoing,
 

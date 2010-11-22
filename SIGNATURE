@@ -1,5 +1,5 @@
 This file contains message digests of all files listed in MANIFEST,
-signed via the Module::Signature module, version 0.63.
+signed via the Module::Signature module, version 0.66.
 
 To verify the content in this distribution, first make sure you have
 Module::Signature installed, then type:
@@ -15,20 +15,21 @@ not run its Makefile.PL or Build.PL.
 Hash: SHA1
 
 SHA1 842745cb706f8f2126506f544492f7a80dbe29b3 COPYING
-SHA1 e25d1319a5091cd903e48eb4b4b9eb9c505edd5e Changes
-SHA1 0ac206f20e625dbb0ffa1cda00f977b6c7f05814 MANIFEST
+SHA1 42e76d8629a61e15f74f661b91b04afa498c5a5c Changes
+SHA1 60c625bc9625640809710cbc0bc8859a9ff806ea MANIFEST
 SHA1 e6e7c2904ea5d300c0ddf70fc5a80f5005229aa9 MANIFEST.SKIP
-SHA1 a6b90c19d694242bcbba9cc59c8fbd3e2dcb8090 META.yml
-SHA1 239f08525af75b0f9300963452161254f1f49e07 Makefile.PL
+SHA1 74ba131f6ab06202e2a4563f19e63de1eaa7aaea META.yml
+SHA1 30195b9cb90dec8371f039bba5caeec0c5fc3c63 Makefile.PL
 SHA1 17749d5b5fd52fa9378f9411fc6807e1db96ddce README
-SHA1 458eb4a3a1cbe11b6b798ef296f45542f1a8a9c1 debian/changelog
+SHA1 50061744a3c881917700aa4e8f5269fb9e46629c debian/changelog
 SHA1 ac3478d69a3c81fa62e60f5c3696165a4e5e6ac4 debian/compat
-SHA1 e692f4ddfcfe16ab9a40d30c9112cc3718fcaa64 debian/control
+SHA1 e91704f61ace98985a2cb6881f3171fa74a1c6f5 debian/control
 SHA1 91660943f231ff3155b8b059810f7db1c979b01d debian/copyright
 SHA1 b21dd8f805f87ac933fba36dba6c87af0f54cd2a debian/rules
 SHA1 61652cd1568dcf2614df833eba241755eee34e89 debian/source/format
 SHA1 e4f8d0bdfd6e32e3f503951e4ea7a9bb6cb6beba debian/watch
 SHA1 f59da1f0200f4f0cd8d33cb6b4a242f9e8ff7a74 devel/GNUmakefile
+SHA1 539ca60c3a190679b39396ac48253e459967f5e4 devel/Xor-class.pm
 SHA1 48e6c2b77f96df6ccb91a8abb406e80e4e23acb3 devel/cross-and-dragger.pl
 SHA1 4c07f0d3ea625d2bd83ce100a0bc6cec2f045695 devel/cross-ids.pl
 SHA1 a5ae3dcc0011a16cc1044ed769a0525f88edf5fb devel/cross-new-xy.pl
@@ -43,9 +44,10 @@ SHA1 edda04c3bc7f893a34275c7428ba5ea38d3bf878 devel/hand1.pl
 SHA1 51707e11360831031d0c2b995da7c2eacb48c2d6 devel/image.pl
 SHA1 4b4a23ab955dcf38af5388e78feebd251dcec67c devel/lasso-entry.pl
 SHA1 bf5d4c46261cb96646bfcb95cce61ce66c63dcbc devel/lasso-screenshot.pl
-SHA1 9d475f18ff49d81aaa9f55de8215767e37a6cf32 devel/lasso.pl
+SHA1 a32ae85a4f9b1251e35ef41918a2b720551cad16 devel/lasso.pl
 SHA1 d9aba69a9c3bf924f32c0bb4c09c91b76f3d44ec devel/layout.pl
 SHA1 d74662c8675eaf422fa52efde3e5052fdfe69a8c devel/misc.pl
+SHA1 6270fe20b441458670172c2c45f8a6292b36a628 devel/properties.pl
 SHA1 2e1034ea11ab4d2fe4ae01ac0ab5d5a30a0ae65e devel/textview.pl
 SHA1 a07def6026c177d1ed82710c10abc0cd535fc0fd devel/ticker.pl
 SHA1 0d9ac661b96d7d3aa0bef49f6f0f5a38254a0ec3 devel/unused.pl
@@ -54,17 +56,18 @@ SHA1 ff5c607e7ce205bb236c2393634f50df7c8cda01 examples/cross-area.pl
 SHA1 1e22c129a44f8c6928635e56ac21d5c0d27531f0 examples/cross-label.pl
 SHA1 15411fb81687b82978e850fcfee8e1aefac092e9 examples/cross-textview.pl
 SHA1 c4acf8372855b7707078e6b400a7bfebbd5350f4 examples/lasso-area.pl
-SHA1 3cf3345a9177dbe362dfc8fbf192272f4a611ca8 inc/MyMakeMakerExtras.pm
+SHA1 e7d8ff1d4ab242036cf1fb95509f85752db10734 examples/lasso-builder.pl
+SHA1 4fb53efe76b3b2264eaa4cf7780cb0c4923e18a5 inc/MyMakeMakerExtras.pm
 SHA1 692a1ddc2ca6b98cac7b48ea40bc1ac1509e8ed9 inc/my_pod2html
 SHA1 ecc98dad6420731b5efd494a196e252e6280da1c junk/canvas.pl
-SHA1 9a5c67653edc93c32e02aebb4e4f21fc7316426b lib/Gtk2/Ex/CrossHair.pm
-SHA1 548e961e9f3abdf19bbf6f9e46d11d0fdb1c56a5 lib/Gtk2/Ex/Lasso.pm
-SHA1 c89795f286efa4c9fb5a6780797e49784dd50232 lib/Gtk2/Ex/Xor.pm
+SHA1 053d16c9cb0218a55f945ab9ef41e172bd6a0c8c lib/Gtk2/Ex/CrossHair.pm
+SHA1 61808be1bf3d6de9a0588f200ecba1ce6592d93b lib/Gtk2/Ex/Lasso.pm
+SHA1 ce0fc397246e79b641daa578c6d7fc071c13f5ad lib/Gtk2/Ex/Xor.pm
 SHA1 c386724fdcb752bb0a280d8da3aca5d515ddaeaf t/CrossHair-overload.t
-SHA1 3cfe492608f726b169c55d1de60159ac5ea5bfa1 t/CrossHair.t
-SHA1 91cdb469b9b9adbd87042cb5ff04ba0174c0dc64 t/Lasso.t
+SHA1 975eb9dec3945b9f735f9e2abc9e1687781f5d06 t/CrossHair.t
+SHA1 73f18c937ea072239f23bc63fb8437c036dfe9b9 t/Lasso.t
 SHA1 5e5680b471811244fe93571efc23e7b6089cac3b t/MyTestHelpers.pm
-SHA1 a8f940791105f3b355c3dce396fa9fd5aad2b3af t/Xor.t
+SHA1 3ae5071e5e8ccbb1b70963cd5ccd77e276b44988 t/Xor.t
 SHA1 9127f78a0dfa04976acbb979dd7862ef59a74c58 xt/0-META-read.t
 SHA1 37abd43b41068804ea4bb099fdd89af21be82926 xt/0-Test-DistManifest.t
 SHA1 8f93fb4c8f0424a4442cc93c9a2e86342ef55281 xt/0-Test-Pod.t
@@ -73,7 +76,7 @@ SHA1 fb517c2fae5ddac559318bf6a224949115ea3129 xt/0-Test-YAML-Meta.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.10 (GNU/Linux)
 
-iD8DBQFMk+neLFMCIV9q3ToRAmTmAKCYAQGScLEcGCIh1NbUHCTPTfFglgCggEt+
-/wxNSqOuvBmINUqs5L8+Pmw=
-=y9W7
+iD8DBQFM6tNJLFMCIV9q3ToRAtotAKCF0zqYFO4eVhhxGrVZk0kr90ghKQCfTqrW
+mvqXGuuXvRiDpSmPIdHakVM=
+=II9f
 -----END PGP SIGNATURE-----

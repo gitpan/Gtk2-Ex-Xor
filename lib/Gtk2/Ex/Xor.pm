@@ -26,7 +26,7 @@ use List::Util;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 14;
+our $VERSION = 15;
 
 my $cache;
 
@@ -57,19 +57,25 @@ sub shared_gc {
     my $xor_color;
     foreach my $fb ('fore','back') {
       my $color;
-      if (defined ($color = delete $params{"${fb}ground_xor"})) {
+      ### color: $fb
+      if (exists $params{"${fb}ground_xor"}) {
+        $color = delete $params{"${fb}ground_xor"};
+        ### param xor: $color
         if (! defined $xor_color) {
           $xor_color = $widget->Gtk2_Ex_Xor_background;
           ### xor pixel: $xor_color->pixel
         }
         $color = Gtk2::Gdk::Color->new
-          (0,0,0, $xor_color->pixel ^ _color_lookup($colormap,$color)->pixel);
-      } elsif (defined ($color = delete $params{"${fb}ground"})) {
-        $color = _color_lookup ($colormap, $color);
+          (0,0,0,
+           $xor_color->pixel
+           ^ _color_lookup($widget,$fb,$colormap,$color)->pixel);
       } else {
-        my $method = ($fb eq 'fore' ? 'fg' : 'bg');
-        $color = $widget->get_style->$method ($widget->state);
+        $color = delete $params{"${fb}ground"};
+        ### param plain: $color
+        $color = _color_lookup ($widget, $fb, $colormap, $color);
       }
+      ### resulting color: $color
+      ### resulting color: $color->to_string
       push @colors, $color;
     }
     ($params{'foreground'}, $params{'background'}) = @colors;
@@ -117,13 +123,22 @@ sub shared_gc {
 }
 
 sub _color_lookup {
-  my ($colormap, $color) = @_;
+  my ($widget, $fb, $colormap, $color) = @_;
+  ### _color_lookup(): $color
+  if (! defined $color) {
+    my $method = ($fb eq 'fore' ? 'fg' : 'bg');
+    ### widget: $fb
+    ### is: $widget->get_style->$method ($widget->state)
+    return $widget->get_style->$method ($widget->state);
+  }
   if (ref $color) {
     # copy so as not to clobber pixel field
     $color = $color->copy;
   } elsif (Scalar::Util::looks_like_number($color)) {
+    ### pixel
     return Gtk2::Gdk::Color->new (0,0,0, $color);
   } else {
+    ### parse
     my $str = $color;
     $color = Gtk2::Gdk::Color->parse ($str)
       || croak "Cannot parse colour '$str'";
@@ -132,6 +147,7 @@ sub _color_lookup {
   # if the rest of gtk is using the rgb chunk anyway then may as well do the
   # same
   $colormap->rgb_find_color ($color);
+  ### rgb_find_color: $color
   return $color;
 }
 
@@ -142,7 +158,6 @@ sub _color_lookup {
 #
 sub _dash_list_is_default {
   my ($dash_list) = @_;
-  # a value other than 4 is 
   return ! (defined $dash_list
             && List::Util::first {$_ != 4} @$dash_list);
 }

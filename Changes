@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
+Version 15, November 2010
+    - fix for default foreground colour
 
 Version 14, August 2010
     - Lasso no swap corners before Gtk 2.8
