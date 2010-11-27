@@ -31,7 +31,7 @@ use Gtk2::Ex::Xor;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 15;
+our $VERSION = 16;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
@@ -70,10 +70,40 @@ use Glib::Object::Subclass
                    'The colour to draw the lasso, either a string name, an allocated Gtk2::Gdk::Color object, or undef for the widget\'s style foreground.',
                    Glib::G_PARAM_READWRITE),
 
+                  Glib::ParamSpec->string
+                  ('foreground-name',
+                   'foreground-name',
+                   'The colour to draw the lasso, as a string colour name.',
+                   (eval {Glib->VERSION(1.240);1}
+                    ? undef # default
+                    : ''),  # no undef/NULL before Perl-Glib 1.240
+                   Glib::G_PARAM_READWRITE),
+
+                  Glib::ParamSpec->boxed
+                  ('foreground-gdk',
+                   'foreground-gdk',
+                   'The colour to draw the lasso, as a Gtk2::Gdk::Color object with red,greed,blue fields set (a pixel is looked up on the target widget).',
+                   'Gtk2::Gdk::Color',
+                   Glib::G_PARAM_READWRITE),
+
                   Glib::ParamSpec->scalar
                   ('cursor',
                    'cursor',
                    'Cursor while lassoing, anything accepted by Gtk2::Ex::WidgetCursor, default \'hand1\'.',
+                   Glib::G_PARAM_READWRITE),
+
+                  Glib::ParamSpec->string
+                  ('cursor-name',
+                   'cursor-name',
+                   'Cursor to show while lassoing, as cursor type enum nick, or "invisible".',
+                   'hand1',
+                   Glib::G_PARAM_READWRITE),
+
+                  Glib::ParamSpec->boxed
+                  ('cursor-object',
+                   'cursor-object',
+                   'Cursor to show while lassoing, as cursor object.',
+                   'Gtk2::Gdk::Cursor',
                    Glib::G_PARAM_READWRITE),
 
                 ];
@@ -93,19 +123,82 @@ sub FINALIZE_INSTANCE {
   }
 }
 
+sub GET_PROPERTY {
+  my ($self, $pspec) = @_;
+  my $pname = $pspec->get_name;
+  ### Lasso GET_PROPERTY(): $pname
+
+  if ($pname eq 'foreground_name') {
+    my $foreground = $self->{'foreground'};
+    ### $foreground
+    if (Scalar::Util::blessed($foreground)
+        && $foreground->isa('Gtk2::Gdk::Color')) {
+      ### str: $foreground->to_string
+      ### blue: $foreground->blue
+      $foreground = $foreground->to_string; # string "#RRRRGGGGBBBB"
+    }
+    return $foreground;
+  }
+  if ($pname eq 'foreground_gdk') {
+    my $foreground = $self->{'foreground'};
+    ### $foreground
+    if (defined $foreground
+        && ! Scalar::Util::blessed($foreground)) {
+      # Perl-Glib 1.220 doesn't copy a boxed return like Gtk2::Gdk::Color,
+      # must keep the block of memory in a field
+      $foreground = $self->{'_foreground_gdk'}
+        = Gtk2::Gdk::Color->parse($foreground);
+    }
+    return $foreground;
+  }
+  if ($pname eq 'cursor_name') {
+    my $cursor = $self->{'cursor'};
+    if (Scalar::Util::blessed($cursor)) {
+      $cursor = $cursor->type;
+    }
+    return $cursor;
+  }
+  if ($pname eq 'cursor_object') {
+    my $cursor = $self->{'cursor'};
+    return (Scalar::Util::blessed($cursor)
+            && $cursor->isa('Gtk2::Gdk::Cursor')
+            && $cursor);
+  }
+
+  return $self->{$pname};
+}
+
 sub SET_PROPERTY {
   my ($self, $pspec, $newval) = @_;
   my $pname = $pspec->get_name;
-  my $oldval = $self->{$pname};
+  ### Lasso SET_PROPERTY(): $pname
 
-  if ($pname eq 'foreground') {
+  if ($pname =~ /^foreground/) {
+    # must copy if 'foreground_gdk' since $newval points to a malloced
+    # copy or something, copy scalar 'foreground' too just in case
+    if (Scalar::Util::blessed($newval)
+        && $newval->isa('Gtk2::Gdk::Color')) {
+      $newval = $newval->copy;
+    }
     if ($self->{'drawn'}) { _draw ($self); }  # undraw old
     delete $self->{'gc'};                     # discard old colour gc
-    $self->{$pname} = $newval;                # per default GET_PROPERTY
+    $self->{'foreground'} = $newval;
     if ($self->{'active'}) { _draw ($self); } # draw new colour
+    $self->notify('foreground');
+    $self->notify('foreground-name');
+    $self->notify('foreground-gdk');
+    return;
+  }
+  if ($pname =~ /^cursor/) {
+    $self->{'cursor'} = $newval;
+    _update_widgetcursor ($self);
+    $self->notify('cursor');
+    $self->notify('cursor-name');
+    $self->notify('cursor-object');
     return;
   }
 
+  my $oldval = $self->{$pname};
   if ($pname eq 'widget') {
     my $active = $self->{'active'};
     my $button = $self->{'button'};
@@ -142,9 +235,6 @@ sub SET_PROPERTY {
       $self->abort;
     }
 
-  } elsif ($pname eq 'cursor') {
-    $self->{$pname} = $newval;  # per default GET_PROPERTY
-    _update_widgetcursor ($self);
   }
 }
 
@@ -653,6 +743,10 @@ same as calling C<start> or C<end> above (except you can't pass events).
 
 =item C<foreground> (scalar, default C<undef>)
 
+=item C<foreground-name> (string, default C<undef>)
+
+=item C<foreground-gdk> (C<Gtk2::Gdk::Color> object, default C<undef>)
+
 The colour for the lasso.  This can be
 
 =over 4
@@ -674,7 +768,22 @@ A C<Gtk2::Gdk::Color> object with C<red>, C<green>, C<blue> fields set.
 
 =back
 
-=item C<cursor> (scalar, default C<"hand1">)
+All three C<foreground>, C<foreground-name> and C<foreground-gdk> access the
+same underlying setting.  C<foreground-name> and C<foreground-gdk> exist for
+use with C<Gtk2::Builder> where the generic scalar C<foreground> property
+can't be set.
+
+In the current code, if the foreground is a C<Gtk2::Gdk::Color> object then
+C<foreground-name> reads as its C<to_string> like "#11112222333", or if
+foreground is a string name then C<foreground-gdk> reads as parsed to a
+C<Gtk2::Gdk::Color>.  Is this a good idea?  Perhaps it will change in the
+future.
+
+=item C<cursor> (scalar, default "hand1")
+
+=item C<cursor-name> (string, cursor enum nick or "invisible", default "hand1")
+
+=item C<cursor-object> (C<Gtk2::Gdk::Cursor>)
 
 The mouse cursor type to display while lassoing.  This can be any string or
 object understood by C<Gtk2::Ex::WidgetCursor>, or C<undef> for no cursor
@@ -684,6 +793,14 @@ A different cursor is highly desirable because when starting a lasso it's
 normally too small for the user to see and so really needs another visual
 indication that selection has begun.  The default C<"hand1"> is meant to be
 reasonable.
+
+The C<cursor-name> and C<cursor-object> properties access the same
+underlying C<cursor> setting but with respective string or cursor object
+type.  They can be used from a C<Gtk2::Builder> specification.
+
+If setting a C<Gtk2::Gdk::Cursor> object remember that cursors are a
+per-display resource so the cursor object must be on the same display as the
+target C<widget>.
 
 The cursor can be changed while the lasso is active.  Doing so is probably
 unusual but works and might be used for something creative like further
@@ -713,6 +830,32 @@ Emitted when a region selection ends by the user aborting, which normally
 means no action on any region.
 
 =back
+
+=head1 BUILDABLE
+
+Lasso can be created from C<Gtk2::Builder> the same as other objects.  The
+class name is C<Gtk2__Ex__Lasso> and it will normally be a top-level object
+with the C<widget> property telling it what to act on.
+
+    <object class="Gtk2__Ex__Lasso" id="mylasso">
+      <property name="widget">drawingwidget</property>
+      <property name="foreground-name">orange</property>
+      <property name="cursor-name">umbrella</property>
+      <signal name="ended" handler="do_lasso_ended"/>
+    </object>
+
+The C<foreground-name> property is the best way to control the colour.  The
+generic C<foreground> can't be used because it's a Perl scalar type.  The
+C<foreground-gdk> works since C<Gtk2::Builder> knows how to parse a colour
+name to a C<Gtk2::Gdk::Color> object, but the Builder also allocates a pixel
+in the default colormap, which is unnecessary as the Lasso will do that
+itself on the target widget's colormap.
+
+The C<cursor-name> property is similarly the best way to control the mouse
+cursor type, if the default hand is not wanted.  The generic C<cursor>
+property can't be used because it's a Perl scalar type.  The
+C<cursor-object> probably can't be used since the Builder doesn't support
+cursor creation (as of Gtk circa 2.16).
 
 =head1 OTHER NOTES
 

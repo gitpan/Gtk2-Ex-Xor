@@ -16,6 +16,10 @@ You should have received a copy of the GNU General Public License
 along with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
+Version 16, November 2010
+    - CrossHair properties foreground-name, foreground-gdk
+    - Lasso properties foreground-name,foreground-gdk,cursor-name,cursor-object
+
 Version 15, November 2010
     - fix for default foreground colour
 

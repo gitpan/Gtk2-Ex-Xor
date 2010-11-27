@@ -24,12 +24,13 @@
 #
 # The lasso object is a separate toplevel and the "widget" property sets
 # where it will select and draw.  Starting the lasso must be done from code
-# in a signal handler the same as in plain code, but fetching the lasso
-# object out of the builder.
+# in a signal handler, getting the lasso object out of the builder.
 #
-# There's no way to set the "foreground" colour property for the lasso yet,
-# because it's a Perl scalar property type.  But string or color object
-# aliases coming soon ...
+# The "foreground-name" property on the lasso can set the lasso colour.  The
+# plain "foreground" property is a Glib::Scalar which can't be set from
+# builder xml (as of Perl-Gtk 1.240).  "foreground-gdk" also works, and
+# verifies the colour name is known, but it allocates the colour in the
+# default colormap, which is unnecessary.
 #
 
 use strict;
@@ -75,6 +76,7 @@ Lassoing with GtkBuilder.
 
   <object class="Gtk2__Ex__Lasso" id="lasso">
     <property name="widget">toplevel</property>
+    <property name="foreground-name">red</property>
     <signal name="ended" handler="do_ended"/>
   </object>
 </interface>

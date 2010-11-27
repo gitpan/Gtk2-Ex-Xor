@@ -33,7 +33,7 @@ use Gtk2::Ex::WidgetBits 31; # v.31 for xy_root_to_widget()
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 15;
+our $VERSION = 16;
 
 # In each CrossHair the private fields are
 #
@@ -110,6 +110,22 @@ use Glib::Object::Subclass
                    'The colour to draw the crosshair, either a string name (including hex RGB), a Gtk2::Gdk::Color, or undef for the widget\'s style foreground.',
                    Glib::G_PARAM_READWRITE),
 
+                 Glib::ParamSpec->string
+                 ('foreground-name',
+                  'foreground-name',
+                  'The colour to draw the crosshair, as a string colour name.',
+                   (eval {Glib->VERSION(1.240);1}  
+                    ? undef # default
+                    : ''),  # no undef/NULL before Perl-Glib 1.240
+                  Glib::G_PARAM_READWRITE),
+
+                 Glib::ParamSpec->boxed
+                 ('foreground-gdk',
+                  'foreground-gdk',
+                  'The colour to draw the crosshair, as a Gtk2::Gdk::Color object with red,greed,blue fields set (a pixel is looked up on each target widget).',
+                  'Gtk2::Gdk::Color',
+                  Glib::G_PARAM_READWRITE),
+
                   Glib::ParamSpec->int
                   ('line-width',
                    'line-width',
@@ -146,12 +162,34 @@ sub _pw {
 sub GET_PROPERTY {
   my ($self, $pspec) = @_;
   my $pname = $pspec->get_name;
+  ### CrossHair GET_PROPERTY: $pname
+
   if ($pname eq 'widget') {
     my $widgets = $self->{'widgets'};
     if (@$widgets > 1) {
       croak 'Cannot get single \'widget\' property when using multiple widgets';
     }
     return $widgets->[0];
+  }
+  if ($pname eq 'foreground_name') {
+    my $foreground = $self->{'foreground'};
+    if (Scalar::Util::blessed($foreground)
+        && $foreground->isa('Gtk2::Gdk::Color')) {
+      $foreground = $foreground->to_string; # string "#RRRRGGGGBBBB"
+    }
+    return $foreground;
+  }
+  if ($pname eq 'foreground_gdk') {
+    my $foreground = $self->{'foreground'};
+    ### $foreground
+    if (defined $foreground
+        && ! Scalar::Util::blessed($foreground)) {
+      # Perl-Glib 1.220 doesn't copy a boxed return like Gtk2::Gdk::Color,
+      # must keep the block of memory in a field
+      $foreground = $self->{'_foreground_gdk'}
+        = Gtk2::Gdk::Color->parse($foreground);
+    }
+    return $foreground;
   }
   return $self->{$pname};
 }
@@ -215,7 +253,19 @@ sub SET_PROPERTY {
       $self->end;
     }
 
-  } elsif ($pname eq 'foreground' || $pname eq 'line_width') {
+  } elsif ($pname =~ /^foreground/ || $pname eq 'line_width') {
+    if ($pname =~ /^foreground/) {
+      # must copy if 'foreground_gdk' since $newval points to a malloced
+      # copy or something, copy scalar 'foreground' too just in case
+      if (Scalar::Util::blessed($newval)
+          && $newval->isa('Gtk2::Gdk::Color')) {
+        $newval = $newval->copy;
+      }
+      $pname = 'foreground';
+      $self->notify('foreground');
+      $self->notify('foreground-name');
+      $self->notify('foreground-gdk');
+    }
     _undraw ($self);
     foreach my $pw (_pw_list($self)) {
       delete $pw->{'gc'}; # new gc's for colour or width
@@ -807,6 +857,10 @@ from the single C<widget>.
 
 =item C<foreground> (colour scalar, default C<undef>)
 
+=item C<foreground-name> (string, default C<undef>)
+
+=item C<foreground-gdk> (C<Gtk2::Gdk::Color> object, default C<undef>)
+
 The colour for the crosshair.  This can be
 
 =over 4
@@ -827,6 +881,17 @@ A C<Gtk2::Gdk::Color> object with C<red>, C<green>, C<blue> fields set.
 (A pixel value will be looked up in each widget.)
 
 =back
+
+All three C<foreground>, C<foreground-name> and C<foreground-gdk> access the
+same underlying setting.  C<foreground-name> and C<foreground-gdk> exist for
+use with C<Gtk2::Builder> where the generic scalar C<foreground> property
+can't be set.
+
+In the current code, if the foreground is a C<Gtk2::Gdk::Color> object then
+C<foreground-name> reads as its C<to_string> like "#11112222333", or if
+foreground is a string name then C<foreground-gdk> reads as parsed to a
+C<Gtk2::Gdk::Color>.  Is this a good idea?  Perhaps it will change in the
+future.
 
 =item C<line-width> (integer, default 0)
 
@@ -856,6 +921,25 @@ any.  Usually the button press grab is good thing, it means a dragged button
 keeps reporting about the original window.
 
 =back
+
+=head1 BUILDABLE
+
+CrossHair can be created from C<Gtk2::Builder> the same as other objects.
+The class name is C<Gtk2__Ex__CrossHair> and it will normally be a top-level
+object with the C<widget> property telling it what to act on.
+
+    <object class="Gtk2__Ex__CrossHair" id="mycross">
+      <property name="widget">drawingwidget</property>
+      <property name="foreground-name">orange</property>
+      <signal name="moved" handler="do_cross_moved"/>
+    </object>
+
+The C<foreground-name> property is the best way to control the colour.  The
+generic C<foreground> can't be used because it's a Perl scalar type.  The
+C<foreground-gdk> works since C<Gtk2::Builder> knows how to parse a colour
+name to a C<Gtk2::Gdk::Color> object, but the Builder also allocates a pixel
+in the default colormap, which is unnecessary as the CrossHair will do that
+itself on the target widget's colormap.
 
 =head1 BUGS
 

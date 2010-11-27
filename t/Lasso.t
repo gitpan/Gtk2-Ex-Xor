@@ -20,15 +20,29 @@
 
 use strict;
 use warnings;
-use Test::More tests => 13;
+use Test::More;
 
 use lib 't';
 use MyTestHelpers;
 BEGIN { MyTestHelpers::nowarnings() }
 
+# uncomment this to run the ### lines
+#use Smart::Comments;
+
 require Gtk2::Ex::Lasso;
 
-my $want_version = 15;
+require Gtk2;
+Gtk2->disable_setlocale;  # leave LC_NUMERIC alone for version nums
+Gtk2->init_check
+  or plan skip_all => 'due to no DISPLAY available';
+MyTestHelpers::glib_gtk_versions();
+
+plan tests => 54;
+
+#------------------------------------------------------------------------------
+# VERSION
+
+my $want_version = 16;
 is ($Gtk2::Ex::Lasso::VERSION, $want_version, 'VERSION variable');
 is (Gtk2::Ex::Lasso->VERSION,  $want_version, 'VERSION class method');
 { ok (eval { Gtk2::Ex::Lasso->VERSION($want_version); 1 },
@@ -47,8 +61,7 @@ is (Gtk2::Ex::Lasso->VERSION,  $want_version, 'VERSION class method');
       "VERSION object check $check_version");
 }
 
-require Gtk2;
-MyTestHelpers::glib_gtk_versions();
+#-----------------------------------------------------------------------------
 
 sub show_wait {
   my ($widget) = @_;
@@ -66,74 +79,238 @@ sub show_wait {
   Glib::Source->remove ($t_id);
 }
 
-#-----------------------------------------------------------------------------
+# return an arrayref
+sub leftover_fields {
+  my ($widget) = @_;
+  return [ grep /Gtk2::Ex::Lasso/, keys %$widget ];
+}
 
-SKIP: {
-  require Gtk2;
-  Gtk2->disable_setlocale;  # leave LC_NUMERIC alone for version nums
-  if (! Gtk2->init_check) { skip 'due to no DISPLAY available', 6; }
 
-  # return an arrayref
-  sub leftover_fields {
-    my ($widget) = @_;
-    return [ grep /Gtk2::Ex::Lasso/, keys %$widget ];
+# destroyed when weakened inactive
+{
+  my $widget = Gtk2::Window->new ('toplevel');
+  my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
+  my $weak_lasso = $lasso;
+  require Scalar::Util;
+  Scalar::Util::weaken ($weak_lasso);
+  $lasso = undef;
+  MyTestHelpers::main_iterations();
+  is ($weak_lasso, undef, 'inactive Lasso weakened');
+  is_deeply (leftover_fields($widget), [],
+             'no Lasso data left behind from inactive');
+  $widget->destroy;
+}
+
+# destroyed when weakened active
+{
+  my $widget = Gtk2::Window->new ('toplevel');
+  my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
+  show_wait ($widget);
+  $lasso->start;
+  my $weak_lasso = $lasso;
+  Scalar::Util::weaken ($weak_lasso);
+  $lasso = undef;
+  is ($weak_lasso, undef, 'active Lasso weakened');
+  is_deeply (leftover_fields($widget), [],
+             'no Lasso data left behind from active');
+  $widget->destroy;
+}
+
+# start() emits "notify::active"
+{
+  my $widget = Gtk2::Window->new ('toplevel');
+  show_wait ($widget);
+  my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
+  my $seen_notify = 0;
+  $lasso->signal_connect ('notify::active' => sub { $seen_notify = 1; });
+  $lasso->start;
+  is ($seen_notify, 1);
+  $widget->destroy;
+}
+
+# end() emits "notify::active"
+{
+  my $widget = Gtk2::Window->new ('toplevel');
+  show_wait ($widget);
+  my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
+  $lasso->start;
+  my $seen_notify = 0;
+  $lasso->signal_connect ('notify::active' => sub { $seen_notify = 1; });
+  $lasso->end;
+  is ($seen_notify, 1);
+  $widget->destroy;
+}
+
+#------------------------------------------------------------------------------
+# cursor properties
+
+# return true if two Glib::Boxed objects $b1 and $b2 point to the same
+# underlying C object
+sub glib_boxed_equal {
+  my ($b1, $b2) = @_;
+  my $pspec = Glib::ParamSpec->boxed ('equal', 'equal', 'blurb', ref($b1),
+                                      Glib::G_PARAM_READWRITE());
+  if ($pspec->can('values_cmp')) {
+    # new in Perl-Glib 1.220
+    return $pspec->values_cmp($b1,$b2) == 0;
+  } else {
+    return 1;
   }
+}
 
+{
+  my $lasso = Gtk2::Ex::Lasso->new;
+  my %notifies;
+  $lasso->signal_connect (notify => sub {
+                            my ($lasso, $pspec) = @_;
+                            $notifies{$pspec->get_name} = 1;
+                          });
 
-  # destroyed when weakened inactive
+  # claimed defaults
+  is ($lasso->get('cursor'), 'hand1', 'cursor - default hand1');
+  is ($lasso->get('cursor-name'), 'hand1', 'cursor-name - default hand1');
+  is ($lasso->get('cursor-object'), undef,
+      'cursor-object - default merely undef');
+
+ SKIP: {
+    my $pspec = $lasso->find_property ('cursor');
+    $pspec->can('get_default_value')
+      or skip 'no pspec get_default_value() for Glib::ParamSpec->scalar() until Perl-Gtk2 1.240', 1;
+  TODO: {
+      local $TODO = 'no settable default for Glib::ParamSpec->scalar() yet';
+      is ($pspec->get_default_value, 'hand1',
+          'cursor - pspec get_default_value()');
+    }
+  }
   {
-    my $widget = Gtk2::Window->new ('toplevel');
-    my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
-    my $weak_lasso = $lasso;
-    require Scalar::Util;
-    Scalar::Util::weaken ($weak_lasso);
-    $lasso = undef;
-    MyTestHelpers::main_iterations();
-    is ($weak_lasso, undef, 'inactive Lasso weakened');
-    is_deeply (leftover_fields($widget), [],
-               'no Lasso data left behind from inactive');
-    $widget->destroy;
+    my $pspec = $lasso->find_property ('cursor-name');
+    is ($pspec->get_default_value, 'hand1',
+        'cursor-name - pspec get_default_value()');
+  }
+ SKIP: {
+    my $pspec = $lasso->find_property ('cursor-object');
+    $pspec->can('get_default_value')
+      or skip 'no pspec get_default_value() for Glib::ParamSpec->scalar() until Perl-Gtk2 1.240', 1;
+
+    is ($pspec->get_default_value, undef,
+        'cursor-object - pspec get_default_value() undef as yet');
   }
 
-  # destroyed when weakened active
-  {
-    my $widget = Gtk2::Window->new ('toplevel');
-    my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
-    show_wait ($widget);
-    $lasso->start;
-    my $weak_lasso = $lasso;
-    Scalar::Util::weaken ($weak_lasso);
-    $lasso = undef;
-    is ($weak_lasso, undef, 'active Lasso weakened');
-    is_deeply (leftover_fields($widget), [],
-               'no Lasso data left behind from active');
-    $widget->destroy;
-  }
+  # string
+  %notifies = ();
+  $lasso->set (cursor => 'boat');
+  is ($lasso->get('cursor'), 'boat');
+  is ($lasso->get('cursor-name'), 'boat');
+  is ($lasso->get('cursor-object'), undef);
+  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1});
 
-  # start() emits "notify::active"
-  {
-    my $widget = Gtk2::Window->new ('toplevel');
-    show_wait ($widget);
-    my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
-    my $seen_notify = 0;
-    $lasso->signal_connect ('notify::active' => sub { $seen_notify = 1; });
-    $lasso->start;
-    is ($seen_notify, 1);
-    $widget->destroy;
-  }
+  # object
+  my $fleur = Gtk2::Gdk::Cursor->new ('fleur');
+  %notifies = ();
+  $lasso->set (cursor => $fleur);
+  ok (glib_boxed_equal ($lasso->get('cursor'), $fleur));
+  is ($lasso->get('cursor-name'), 'fleur');
+  # boxed objects not equal
+  ok (glib_boxed_equal ($lasso->get('cursor-object'), $fleur));
+  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1});
 
-  # end() emits "notify::active"
-  {
-    my $widget = Gtk2::Window->new ('toplevel');
-    show_wait ($widget);
-    my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
-    $lasso->start;
-    my $seen_notify = 0;
-    $lasso->signal_connect ('notify::active' => sub { $seen_notify = 1; });
-    $lasso->end;
-    is ($seen_notify, 1);
-    $widget->destroy;
+  # cursor-name string
+  %notifies = ();
+  $lasso->set (cursor_name => 'umbrella');
+  is ($lasso->get('cursor'), 'umbrella');
+  is ($lasso->get('cursor-name'), 'umbrella');
+  is ($lasso->get('cursor-object'), undef);
+  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1});
+
+  # cursor-object object
+  %notifies = ();
+  $lasso->set (cursor_object => Gtk2::Gdk::Cursor->new ('plus'));
+  ok (glib_boxed_equal ($lasso->get('cursor'),
+                        Gtk2::Gdk::Cursor->new('plus')));
+  is ($lasso->get('cursor-name'), 'plus');
+  # boxed objects not equal
+  ok (glib_boxed_equal ($lasso->get('cursor-object'),
+                        Gtk2::Gdk::Cursor->new('plus')));
+  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1});
+}
+
+#------------------------------------------------------------------------------
+# foreground properties
+
+# return true if two Glib::Boxed objects $b1 and $b2 point to the same
+# underlying C object
+{
+  my $n = 0;
+  sub color_parts {
+    my ($color) = @_;
+    if (Scalar::Util::blessed($color)) {
+      return $color->red .','. $color->blue .','. $color->green;
+    } else {
+      return 'not-a-color-object'.$n++;
+    }
   }
+}
+
+{
+  my $lasso = Gtk2::Ex::Lasso->new;
+  my %notifies;
+  $lasso->signal_connect (notify => sub {
+                            my ($lasso, $pspec) = @_;
+                            my $pname = $pspec->get_name;
+                            $notifies{$pname} = 1;
+                          });
+
+  # claimed defaults
+  is ($lasso->get('foreground'), undef, 'foreground - default undef');
+  is ($lasso->get('foreground-name'), undef, 'foreground-name - default undef');
+  is ($lasso->get('foreground-gdk'), undef,
+      'foreground-gdk - default undef');
+
+  # string
+  %notifies = ();
+  $lasso->set (foreground => 'white');
+  is ($lasso->get('foreground'), 'white');
+  is ($lasso->get('foreground-name'), 'white');
+  is (color_parts ($lasso->get('foreground-gdk')),
+      color_parts (Gtk2::Gdk::Color->parse('white')),
+      'foreground string - foreground-gdk value');
+  is_deeply (\%notifies, {foreground=>1,foreground_name=>1,foreground_gdk=>1},
+             'foreground string - notifies');
+
+  # object
+  my $red = Gtk2::Gdk::Color->new (65535,0,0);
+  %notifies = ();
+  $lasso->set (foreground => $red);
+  is (color_parts ($lasso->get('foreground')),
+      color_parts ($red));
+  is ($lasso->get('foreground-name'), '#ffff00000000');
+  # boxed objects not equal
+  is (color_parts ($lasso->get('foreground-gdk')),
+      color_parts ($red));
+  is_deeply (\%notifies, {foreground=>1,foreground_name=>1,foreground_gdk=>1},
+             'foreground object notifies');
+
+  # foreground-name string
+  %notifies = ();
+  $lasso->set (foreground_name => 'black');
+  is ($lasso->get('foreground'), 'black');
+  is ($lasso->get('foreground-name'), 'black');
+  is (color_parts ($lasso->get('foreground-gdk')),
+      color_parts (Gtk2::Gdk::Color->new (0,0,0)));
+  is_deeply (\%notifies, {foreground=>1,foreground_name=>1,foreground_gdk=>1},
+             'foreground-name notifies');
+
+  # foreground-gdk object
+  my $green = Gtk2::Gdk::Color->new (0,65535,0);
+  %notifies = ();
+  $lasso->set (foreground_gdk => $green);
+  is (color_parts ($lasso->get('foreground')),
+      color_parts ($green));
+  is ($lasso->get('foreground-name'), '#0000ffff0000');
+  # boxed objects not equal
+  is (color_parts ($lasso->get('foreground-gdk')),
+      color_parts ($green));
+  is_deeply (\%notifies, {foreground=>1,foreground_name=>1,foreground_gdk=>1});
 }
 
 exit 0;

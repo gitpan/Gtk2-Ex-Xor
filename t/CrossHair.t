@@ -31,9 +31,9 @@ require Gtk2::Ex::CrossHair;
 require Gtk2;
 Gtk2->init_check
   or plan skip_all => 'due to no DISPLAY available';
-plan tests => 23;
+plan tests => 42;
 
-my $want_version = 15;
+my $want_version = 16;
 is ($Gtk2::Ex::CrossHair::VERSION, $want_version, 'VERSION variable');
 is (Gtk2::Ex::CrossHair->VERSION,  $want_version, 'VERSION class method');
 { ok (eval { Gtk2::Ex::CrossHair->VERSION($want_version); 1 },
@@ -134,7 +134,7 @@ MyTestHelpers::glib_gtk_versions();
   Scalar::Util::weaken ($weak_cross);
   undef $cross;
   is ($weak_cross, undef, 'weaken empty - destroyed');
-  if (defined &explain) { diag explain $weak_cross; }
+  if (defined &explain) { diag explain($weak_cross); }
   if ($weak_cross) { MyTestHelpers::findrefs ($weak_cross); }
 }
 
@@ -149,8 +149,8 @@ MyTestHelpers::glib_gtk_versions();
   MyTestHelpers::main_iterations();
   is ($weak_cross, undef, 'weaken unrealized - destroyed');
   if (defined &explain) {
-    diag explain $widget;
-    diag explain $weak_cross;
+    diag explain($widget);
+    diag explain($weak_cross);
   }
   if ($weak_cross) {
     MyTestHelpers::findrefs ($weak_cross);
@@ -204,7 +204,7 @@ SKIP: {
   MyTestHelpers::main_iterations();
   is ($weak_cross, undef, 'weaken active - destroyed');
   if ($weak_cross) {
-    if (defined &explain) { diag explain $weak_cross; }
+    if (defined &explain) { diag explain($weak_cross); }
     MyTestHelpers::findrefs ($weak_cross);
   }
   is_deeply (leftover_fields($widget), [],
@@ -269,9 +269,9 @@ SKIP: {
   $display->sync;
   MyTestHelpers::main_iterations();
 
-  if (defined &explain) {
-    diag explain $widget;
-  }
+  # if (defined &explain) {
+  #   diag explain($widget);
+  # }
   is_deeply (leftover_fields($widget), [],
              'change widget - no CrossHair data left behind');
 
@@ -282,6 +282,85 @@ SKIP: {
   $widget->destroy;
   $widget2->destroy;
   $display->warp_pointer($screen,$x,$y);
+}
+
+#------------------------------------------------------------------------------
+# foreground properties
+
+# return true if two Glib::Boxed objects $b1 and $b2 point to the same
+# underlying C object
+{
+  my $n = 0;
+  sub color_parts {
+    my ($color) = @_;
+    if (Scalar::Util::blessed($color)) {
+      return $color->red .','. $color->blue .','. $color->green;
+    } else {
+      return 'not-a-color-object'.$n++;
+    }
+  }
+}
+
+{
+  my $crosshair = Gtk2::Ex::CrossHair->new;
+  my %notifies;
+  $crosshair->signal_connect (notify => sub {
+                            my ($crosshair, $pspec) = @_;
+                            my $pname = $pspec->get_name;
+                            $notifies{$pname} = 1;
+                          });
+
+  # claimed defaults
+  is ($crosshair->get('foreground'), undef, 'foreground - default undef');
+  is ($crosshair->get('foreground-name'), undef, 'foreground-name - default undef');
+  is ($crosshair->get('foreground-gdk'), undef,
+      'foreground-gdk - default undef');
+
+  # string
+  %notifies = ();
+  $crosshair->set (foreground => 'white');
+  is ($crosshair->get('foreground'), 'white');
+  is ($crosshair->get('foreground-name'), 'white');
+  is (color_parts ($crosshair->get('foreground-gdk')),
+      color_parts (Gtk2::Gdk::Color->new(65535,65535,65535)));
+  is_deeply (\%notifies, {foreground=>1,foreground_name=>1,foreground_gdk=>1},
+             'foreground string notifies');
+
+  # object
+  my $red = Gtk2::Gdk::Color->new (65535,0,0);
+  %notifies = ();
+  $crosshair->set (foreground => $red);
+  is (color_parts ($crosshair->get('foreground')),
+      color_parts ($red));
+  is ($crosshair->get('foreground-name'), '#ffff00000000');
+  # boxed objects not equal
+  is (color_parts ($crosshair->get('foreground-gdk')),
+      color_parts ($red));
+  is_deeply (\%notifies, {foreground=>1,foreground_name=>1,foreground_gdk=>1},
+             'foreground object notifies');
+
+  # foreground-name string
+  %notifies = ();
+  $crosshair->set (foreground_name => 'black');
+  is ($crosshair->get('foreground'), 'black');
+  is ($crosshair->get('foreground-name'), 'black');
+  is (color_parts ($crosshair->get('foreground-gdk')),
+      color_parts (Gtk2::Gdk::Color->new (0,0,0)));
+  is_deeply (\%notifies, {foreground=>1,foreground_name=>1,foreground_gdk=>1},
+             'foreground-name notifies');
+
+  # foreground-gdk object
+  my $green = Gtk2::Gdk::Color->new (0,65535,0);
+  %notifies = ();
+  $crosshair->set (foreground_gdk => $green);
+  is (color_parts ($crosshair->get('foreground')),
+      color_parts ($green));
+  is ($crosshair->get('foreground-name'), '#0000ffff0000');
+  # boxed objects not equal
+  is (color_parts ($crosshair->get('foreground-gdk')),
+      color_parts ($green));
+  is_deeply (\%notifies, {foreground=>1,foreground_name=>1,foreground_gdk=>1},
+             'foreground-gdk notifies');
 }
 
 exit 0;
