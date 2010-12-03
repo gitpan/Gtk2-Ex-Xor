@@ -31,7 +31,7 @@ use Gtk2::Ex::Xor;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 16;
+our $VERSION = 17;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
@@ -155,6 +155,10 @@ sub GET_PROPERTY {
     my $cursor = $self->{'cursor'};
     if (Scalar::Util::blessed($cursor)) {
       $cursor = $cursor->type;
+      # think prefer undef over cursor-is-pixmap for the get()
+      if ($cursor eq 'cursor-is-pixmap') {
+        undef $cursor;
+      }
     }
     return $cursor;
   }
@@ -795,12 +799,12 @@ indication that selection has begun.  The default C<"hand1"> is meant to be
 reasonable.
 
 The C<cursor-name> and C<cursor-object> properties access the same
-underlying C<cursor> setting but with respective string or cursor object
-type.  They can be used from a C<Gtk2::Builder> specification.
+underlying C<cursor> setting but with string or cursor object type
+respectively.  They can be used from a C<Gtk2::Builder> specification.
 
-If setting a C<Gtk2::Gdk::Cursor> object remember that cursors are a
-per-display resource so the cursor object must be on the same display as the
-target C<widget>.
+If using a C<Gtk2::Gdk::Cursor> object remember that cursor objects are a
+per-display resource and it must be on the same display as the target
+C<widget>.
 
 The cursor can be changed while the lasso is active.  Doing so is probably
 unusual but works and might be used for something creative like further

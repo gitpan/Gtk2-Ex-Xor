@@ -37,12 +37,12 @@ Gtk2->init_check
   or plan skip_all => 'due to no DISPLAY available';
 MyTestHelpers::glib_gtk_versions();
 
-plan tests => 54;
+plan tests => 58;
 
 #------------------------------------------------------------------------------
 # VERSION
 
-my $want_version = 16;
+my $want_version = 17;
 is ($Gtk2::Ex::Lasso::VERSION, $want_version, 'VERSION variable');
 is (Gtk2::Ex::Lasso->VERSION,  $want_version, 'VERSION class method');
 { ok (eval { Gtk2::Ex::Lasso->VERSION($want_version); 1 },
@@ -124,7 +124,7 @@ sub leftover_fields {
   my $seen_notify = 0;
   $lasso->signal_connect ('notify::active' => sub { $seen_notify = 1; });
   $lasso->start;
-  is ($seen_notify, 1);
+  is ($seen_notify, 1, 'start() emits notify::active');
   $widget->destroy;
 }
 
@@ -137,7 +137,7 @@ sub leftover_fields {
   my $seen_notify = 0;
   $lasso->signal_connect ('notify::active' => sub { $seen_notify = 1; });
   $lasso->end;
-  is ($seen_notify, 1);
+  is ($seen_notify, 1, 'end() emits notify::active');
   $widget->destroy;
 }
 
@@ -148,6 +148,11 @@ sub leftover_fields {
 # underlying C object
 sub glib_boxed_equal {
   my ($b1, $b2) = @_;
+  if (! defined $b1 || ! defined $b2) {
+    return 0;
+  }
+  diag "b1 type:";
+  diag $b1->type;
   my $pspec = Glib::ParamSpec->boxed ('equal', 'equal', 'blurb', ref($b1),
                                       Glib::G_PARAM_READWRITE());
   if ($pspec->can('values_cmp')) {
@@ -167,8 +172,10 @@ sub glib_boxed_equal {
                           });
 
   # claimed defaults
-  is ($lasso->get('cursor'), 'hand1', 'cursor - default hand1');
-  is ($lasso->get('cursor-name'), 'hand1', 'cursor-name - default hand1');
+  is ($lasso->get('cursor'),
+      'hand1', 'cursor - default hand1');
+  is ($lasso->get('cursor-name'), 'hand1',
+      'cursor-name - default hand1');
   is ($lasso->get('cursor-object'), undef,
       'cursor-object - default merely undef');
 
@@ -199,39 +206,76 @@ sub glib_boxed_equal {
   # string
   %notifies = ();
   $lasso->set (cursor => 'boat');
-  is ($lasso->get('cursor'), 'boat');
-  is ($lasso->get('cursor-name'), 'boat');
-  is ($lasso->get('cursor-object'), undef);
-  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1});
+  is ($lasso->get('cursor'), 'boat',
+      'set() cursor "boat" - get cursor');
+  is ($lasso->get('cursor-name'), 'boat',
+      'set() cursor "boat" - get cursor-name');
+  is ($lasso->get('cursor-object'), undef,
+      'set() cursor "boat" - get cursor-object');
+  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1},
+             'set() cursor "boat" - notify triple');
 
   # object
   my $fleur = Gtk2::Gdk::Cursor->new ('fleur');
   %notifies = ();
   $lasso->set (cursor => $fleur);
-  ok (glib_boxed_equal ($lasso->get('cursor'), $fleur));
-  is ($lasso->get('cursor-name'), 'fleur');
+  ok (glib_boxed_equal ($lasso->get('cursor'), $fleur),
+      'set() cursor fleur-obj - get cursor');
+  is ($lasso->get('cursor-name'), 'fleur',
+      'set() cursor fleur-obj - get cursor-name');
   # boxed objects not equal
-  ok (glib_boxed_equal ($lasso->get('cursor-object'), $fleur));
-  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1});
+  ok (glib_boxed_equal ($lasso->get('cursor-object'), $fleur),
+      'set() cursor fleur-obj - get cursor-object');
+  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1},
+             'set() cursor fleur-obj - notify triple');
 
   # cursor-name string
   %notifies = ();
   $lasso->set (cursor_name => 'umbrella');
-  is ($lasso->get('cursor'), 'umbrella');
-  is ($lasso->get('cursor-name'), 'umbrella');
-  is ($lasso->get('cursor-object'), undef);
-  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1});
+  is ($lasso->get('cursor'), 'umbrella',
+      'set() cursor-name "umbrella" - get cursor');
+  is ($lasso->get('cursor-name'), 'umbrella',
+      'set() cursor-name "umbrella" - get cursor-name');
+  is ($lasso->get('cursor-object'), undef,
+      'set() cursor-name "umbrella" - get cursor-object');
+  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1},
+             'set() cursor-name "umbrella" - notify triple');
 
   # cursor-object object
   %notifies = ();
   $lasso->set (cursor_object => Gtk2::Gdk::Cursor->new ('plus'));
   ok (glib_boxed_equal ($lasso->get('cursor'),
-                        Gtk2::Gdk::Cursor->new('plus')));
-  is ($lasso->get('cursor-name'), 'plus');
+                        Gtk2::Gdk::Cursor->new('plus')),
+      'set() cursor-object "plus" - get cursor');
+  is ($lasso->get('cursor-name'), 'plus',
+      'set() cursor-object "plus" - get cursor-name');
   # boxed objects not equal
   ok (glib_boxed_equal ($lasso->get('cursor-object'),
-                        Gtk2::Gdk::Cursor->new('plus')));
-  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1});
+                        Gtk2::Gdk::Cursor->new('plus')),
+      'set() cursor-object "plus" - get cursor-object');
+  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1},
+             'set() cursor-object "plus" - notify triple');
+
+  # cursor-object pixmap
+  %notifies = ();
+  my $rootwin = Gtk2::Gdk->get_default_root_window;
+  my $pixmap = Gtk2::Gdk::Pixmap->new ($rootwin, 1, 1, -1);
+  my $bitmap = Gtk2::Gdk::Pixmap->new ($rootwin, 1, 1, 1);
+  my $cursor_obj = Gtk2::Gdk::Cursor->new_from_pixmap
+    ($pixmap,
+     $bitmap,
+     Gtk2::Gdk::Color->new(0,0,0,0), # fg
+     Gtk2::Gdk::Color->new(0,0,0,0), # bg
+     0,0); # x,y hotspot
+  $lasso->set (cursor_object => $cursor_obj);
+  ok (glib_boxed_equal ($lasso->get('cursor'), $cursor_obj),
+      'set() cursor-object pixmap - get cursor');
+  is ($lasso->get('cursor-name'), undef,
+      'set() cursor-object pixmap - get cursor-name');
+  ok (glib_boxed_equal ($lasso->get('cursor-object'), $cursor_obj),
+      'set() cursor-object pixmap - get cursor-object');
+  is_deeply (\%notifies, {cursor=>1,cursor_name=>1,cursor_object=>1},
+             'set() cursor-object pixmap - notify triple');
 }
 
 #------------------------------------------------------------------------------
