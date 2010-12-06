@@ -16,7 +16,10 @@ You should have received a copy of the GNU General Public License
 along with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Version 17, November 2010
+Version 18, December 2010
+    - CrossHair copy out 'widgets' arrayref as it belongs to the caller
+
+Version 17, December 2010
     - tests more diagnostics
 
 Version 16, November 2010

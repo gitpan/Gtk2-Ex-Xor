@@ -31,7 +31,7 @@ use Gtk2::Ex::Xor;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 17;
+our $VERSION = 18;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 

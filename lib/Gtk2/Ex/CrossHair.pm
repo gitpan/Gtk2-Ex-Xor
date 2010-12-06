@@ -33,7 +33,7 @@ use Gtk2::Ex::WidgetBits 31; # v.31 for xy_root_to_widget()
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 17;
+our $VERSION = 18;
 
 # In each CrossHair the private fields are
 #
@@ -208,7 +208,8 @@ sub SET_PROPERTY {
 
   if ($pname eq 'widgets') {
     my $widgets = $newval;
-    ### new widgets: map {"$_"} @$widgets
+    ### old widgets: "$self->{'widgets'}   @{$self->{'widgets'}}"
+    ### new widgets: "$widgets   @$widgets"
 
     _undraw ($self);
 
@@ -226,7 +227,7 @@ sub SET_PROPERTY {
     undef $old_perwidget; # discard pw's of old widgets
     ### perwidget keys now: keys %{$self->{'perwidget'}}
 
-    $self->{$pname} = $newval;  # per default GET_PROPERTY
+    @{$self->{'widgets'}} = @$newval;  # copy contents
 
     my $xy_widget = $self->{'xy_widget'};
     my $root_x = $self->{'root_x'};
@@ -244,7 +245,11 @@ sub SET_PROPERTY {
     _wcursor_update ($self); # new widget set
     $self->notify ('widget');
 
-  } elsif ($pname eq 'active') {
+    ### now widgets: "$self->{'widgets'}   @{$self->{'widgets'}}"
+    return;
+  }
+
+  if ($pname eq 'active') {
     # the extra '$self->notify' calls by running 'start' and 'end' here are
     # ok, Glib suppresses duplicates while in SET_PROPERTY
     if ($newval && ! $oldval) {
@@ -534,7 +539,7 @@ sub _undraw {
   $widgets ||= $self->{'widgets'};
   ### _undraw(): "@$widgets"
 
-  my @widgets = grep { exists _pw($self,$_)->{'x'} } @$widgets;
+  my @widgets = grep { exists(_pw($self,$_)->{'x'}) } @$widgets;
   _draw ($self, \@widgets);
   foreach my $widget (@widgets) {
     # position undetermined as well as undrawn
@@ -843,8 +848,8 @@ button press event.
 An arrayref of widgets to draw on.  Often this will be just one widget, but
 multiple widgets can be given to draw in all of them at the same time.
 
-Widgets can be under different toplevel windows, but they should be all on
-the same screen (L<C<Gtk2::Gdk::Screen>|Gtk2::Gdk::Screen>) since mouse
+The widgets can be under different toplevel windows, but they should be all
+on the same screen (L<C<Gtk2::Gdk::Screen>|Gtk2::Gdk::Screen>) since mouse
 pointer movement in any of them is taken to be a position to draw through
 all of them (with coordinates translated appropriately).
 

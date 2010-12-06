@@ -15,13 +15,13 @@ not run its Makefile.PL or Build.PL.
 Hash: SHA1
 
 SHA1 842745cb706f8f2126506f544492f7a80dbe29b3 COPYING
-SHA1 b025c73c699a1e0d4dc5617da22144eb3b84685f Changes
+SHA1 3d1320673a98c6515cd6ffb1cdb3d21331672ffe Changes
 SHA1 6c1d44612bf5d6dfccb11e5dae1cbf14bdb51578 MANIFEST
 SHA1 e6e7c2904ea5d300c0ddf70fc5a80f5005229aa9 MANIFEST.SKIP
-SHA1 2aefb496dc66d9eff4fdf9bcb71aa8f78d03b38d META.yml
+SHA1 6b1ff5f367be6ee56344ec6965a422a4a6209f5a META.yml
 SHA1 30195b9cb90dec8371f039bba5caeec0c5fc3c63 Makefile.PL
 SHA1 17749d5b5fd52fa9378f9411fc6807e1db96ddce README
-SHA1 90fd07ea8b1f53670110958d87d943345cb07b19 debian/changelog
+SHA1 32f3ce67b6a8c4b3675296aea0d21078df22cdae debian/changelog
 SHA1 ac3478d69a3c81fa62e60f5c3696165a4e5e6ac4 debian/compat
 SHA1 8fa736bb3cd89353d02513d353c9326459a84396 debian/control
 SHA1 91660943f231ff3155b8b059810f7db1c979b01d debian/copyright
@@ -62,14 +62,14 @@ SHA1 900ca4e3186b366c4445c01e86728599d5c49410 examples/lasso-builder.pl
 SHA1 4fb53efe76b3b2264eaa4cf7780cb0c4923e18a5 inc/MyMakeMakerExtras.pm
 SHA1 692a1ddc2ca6b98cac7b48ea40bc1ac1509e8ed9 inc/my_pod2html
 SHA1 ecc98dad6420731b5efd494a196e252e6280da1c junk/canvas.pl
-SHA1 e321e83c0ab17b288065ace7d37dd1bad6f64aac lib/Gtk2/Ex/CrossHair.pm
-SHA1 ebe7e3912202d32146dab64d6dd79ba23238ba7a lib/Gtk2/Ex/Lasso.pm
-SHA1 b07dc4590ad7b444cca5e151468ebb6e93f6e304 lib/Gtk2/Ex/Xor.pm
+SHA1 59dd79513cb61a5dc9dec960b74091022c39fc47 lib/Gtk2/Ex/CrossHair.pm
+SHA1 3f8b5389d1abd446469c26d8544d216de460fa7d lib/Gtk2/Ex/Lasso.pm
+SHA1 8ddec0abdcd3f1ed6a8cc8f6a7ed04e25d210363 lib/Gtk2/Ex/Xor.pm
 SHA1 c386724fdcb752bb0a280d8da3aca5d515ddaeaf t/CrossHair-overload.t
-SHA1 954633e08020decce49823f66ea95759adbf8e27 t/CrossHair.t
-SHA1 4390c49bf4fa1f780896d4a2aa4aebc4cde2d518 t/Lasso.t
+SHA1 45dffe966d3073ae2fa0a676b4a1d772d19a2838 t/CrossHair.t
+SHA1 e8e34718b7e7f2cad47436d3f9a76cba1b60d3a4 t/Lasso.t
 SHA1 5e5680b471811244fe93571efc23e7b6089cac3b t/MyTestHelpers.pm
-SHA1 0fc266c76ccb1416b19d305245baef6090e0ac55 t/Xor.t
+SHA1 270697818e9b0486f1aa7092bdcdbf07320fb4e0 t/Xor.t
 SHA1 9127f78a0dfa04976acbb979dd7862ef59a74c58 xt/0-META-read.t
 SHA1 37abd43b41068804ea4bb099fdd89af21be82926 xt/0-Test-DistManifest.t
 SHA1 8f93fb4c8f0424a4442cc93c9a2e86342ef55281 xt/0-Test-Pod.t
@@ -78,7 +78,7 @@ SHA1 fb517c2fae5ddac559318bf6a224949115ea3129 xt/0-Test-YAML-Meta.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.10 (GNU/Linux)
 
-iD8DBQFM+WPqLFMCIV9q3ToRAg09AKCAW6PdfUIOBGSU4aGhgP4mCwscOACfYWFp
-ya4ed5wnBJIg0Pawv7yAmH8=
-=urt/
+iD8DBQFM/U+zLFMCIV9q3ToRAng3AJ9GdHhYQ5716/7dNYWrjOj12U1kqwCggdie
+r/d+55UIevSotWAcCdDYBZQ=
+=9Bc9
 -----END PGP SIGNATURE-----

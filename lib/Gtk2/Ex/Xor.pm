@@ -26,7 +26,7 @@ use List::Util;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 17;
+our $VERSION = 18;
 
 my $cache;
 
