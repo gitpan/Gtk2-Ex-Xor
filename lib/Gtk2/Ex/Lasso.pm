@@ -21,7 +21,7 @@ use strict;
 use warnings;
 use Carp;
 use List::Util qw(min max);
-use Scalar::Util;
+use Scalar::Util 'blessed';
 use Glib::Ex::SignalIds;
 
 # 1.200 for Gtk2::GC auto-release and GDK_CURRENT_TIME
@@ -31,7 +31,7 @@ use Gtk2::Ex::Xor;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 18;
+our $VERSION = 19;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
@@ -131,8 +131,7 @@ sub GET_PROPERTY {
   if ($pname eq 'foreground_name') {
     my $foreground = $self->{'foreground'};
     ### $foreground
-    if (Scalar::Util::blessed($foreground)
-        && $foreground->isa('Gtk2::Gdk::Color')) {
+    if (blessed($foreground) && $foreground->isa('Gtk2::Gdk::Color')) {
       ### str: $foreground->to_string
       ### blue: $foreground->blue
       $foreground = $foreground->to_string; # string "#RRRRGGGGBBBB"
@@ -142,8 +141,7 @@ sub GET_PROPERTY {
   if ($pname eq 'foreground_gdk') {
     my $foreground = $self->{'foreground'};
     ### $foreground
-    if (defined $foreground
-        && ! Scalar::Util::blessed($foreground)) {
+    if (defined $foreground && ! blessed($foreground)) {
       # Perl-Glib 1.220 doesn't copy a boxed return like Gtk2::Gdk::Color,
       # must keep the block of memory in a field
       $foreground = $self->{'_foreground_gdk'}
@@ -153,7 +151,7 @@ sub GET_PROPERTY {
   }
   if ($pname eq 'cursor_name') {
     my $cursor = $self->{'cursor'};
-    if (Scalar::Util::blessed($cursor)) {
+    if (blessed($cursor)) {
       $cursor = $cursor->type;
       # think prefer undef over cursor-is-pixmap for the get()
       if ($cursor eq 'cursor-is-pixmap') {
@@ -164,7 +162,7 @@ sub GET_PROPERTY {
   }
   if ($pname eq 'cursor_object') {
     my $cursor = $self->{'cursor'};
-    return (Scalar::Util::blessed($cursor)
+    return (blessed($cursor)
             && $cursor->isa('Gtk2::Gdk::Cursor')
             && $cursor);
   }
@@ -180,8 +178,7 @@ sub SET_PROPERTY {
   if ($pname =~ /^foreground/) {
     # must copy if 'foreground_gdk' since $newval points to a malloced
     # copy or something, copy scalar 'foreground' too just in case
-    if (Scalar::Util::blessed($newval)
-        && $newval->isa('Gtk2::Gdk::Color')) {
+    if (blessed($newval) && $newval->isa('Gtk2::Gdk::Color')) {
       $newval = $newval->copy;
     }
     if ($self->{'drawn'}) { _draw ($self); }  # undraw old
@@ -194,6 +191,12 @@ sub SET_PROPERTY {
     return;
   }
   if ($pname =~ /^cursor/) {
+    # copy boxed GdkCursor in case the caller frees it, and in particular
+    # for $pname eq 'cursor_object' it might be freed immediately by the
+    # GValue call-out stuff
+    if (blessed($newval) && $newval->isa('Gtk2::Gdk::Cursor')) {
+      $newval = $newval->copy;
+    }
     $self->{'cursor'} = $newval;
     _update_widgetcursor ($self);
     $self->notify('cursor');
@@ -259,7 +262,7 @@ sub start {
 
   my $want_grab = 1;
   $self->{'button'} = 0;
-  if (Scalar::Util::blessed($event) && $event->can('button')) {
+  if (blessed($event) && $event->can('button')) {
     ### button: $event->button
     $self->{'button'} = $event->button;
 
@@ -313,7 +316,7 @@ sub start {
   push @dynamic, Gtk2::Ex::KeySnooper->new
     (\&_do_key_snooper, $ref_weak_self);
 
-  my ($x, $y) = (Scalar::Util::blessed($event) && $event->can('x')
+  my ($x, $y) = (blessed($event) && $event->can('x')
                  ? Gtk2::Ex::Xor::_event_widget_coords ($widget, $event)
                  : $widget->get_pointer);
   ### initial "$x,$y"
@@ -331,7 +334,7 @@ sub end {
   my ($self, $event) = @_;
   if (! $self->{'active'}) { return; }
 
-  if (Scalar::Util::blessed($event)
+  if (blessed($event)
       && ($event->isa('Gtk2::Gdk::Event::Button')
           || $event->isa('Gtk2::Gdk::Event::Motion'))) {
     _do_motion_notify ($self->{'widget'}, $event, \$self);
@@ -617,7 +620,7 @@ sub _window_constrain_xy {
 # event type which has a timestamp.
 sub _event_time_maybe {
   my ($event) = @_;
-  if (Scalar::Util::blessed($event) && $event->can('time')) {
+  if (blessed($event) && $event->can('time')) {
     return $event->time;
   } else {
     return Gtk2::GDK_CURRENT_TIME;

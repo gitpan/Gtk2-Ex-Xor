@@ -42,7 +42,7 @@ plan tests => 58;
 #------------------------------------------------------------------------------
 # VERSION
 
-my $want_version = 18;
+my $want_version = 19;
 is ($Gtk2::Ex::Lasso::VERSION, $want_version, 'VERSION variable');
 is (Gtk2::Ex::Lasso->VERSION,  $want_version, 'VERSION class method');
 { ok (eval { Gtk2::Ex::Lasso->VERSION($want_version); 1 },

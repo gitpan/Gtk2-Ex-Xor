@@ -33,7 +33,7 @@ Gtk2->init_check
   or plan skip_all => 'due to no DISPLAY available';
 plan tests => 42;
 
-my $want_version = 18;
+my $want_version = 19;
 is ($Gtk2::Ex::CrossHair::VERSION, $want_version, 'VERSION variable');
 is (Gtk2::Ex::CrossHair->VERSION,  $want_version, 'VERSION class method');
 { ok (eval { Gtk2::Ex::CrossHair->VERSION($want_version); 1 },
