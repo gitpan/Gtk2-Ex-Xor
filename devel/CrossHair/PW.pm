@@ -33,7 +33,7 @@ use Gtk2::Ex::WidgetBits 31; # v.31 for xy_root_to_widget()
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 20;
+our $VERSION = 19;
 
 # In each CrossHair the private fields are
 #
@@ -147,7 +147,7 @@ sub INIT_INSTANCE {
   my ($self) = @_;
   ### CrossHair INIT_INSTANCE
   $self->{'button'} = 0;
-  $self->{'widgets'} = [];
+  $self->{'pwhash'} = [];
 }
 
 sub FINALIZE_INSTANCE {
@@ -156,14 +156,18 @@ sub FINALIZE_INSTANCE {
   $self->end;
 }
 
-sub _pw_list {
-  my ($self) = @_;
-  return values %{$self->{'perwidget'}};
-}
 sub _pw {
   my ($self, $widget) = @_;
   ### _pw: "@{[$widget||'[undef]']}"
-  return $self->{'perwidget'}->{refaddr($widget)};
+  return $self->{'pwhash'}->{refaddr($widget)};
+}
+sub _pw_list {
+  my ($self) = @_;
+  return values %{$self->{'pwhash'}};
+}
+sub _widget_list {
+  my ($self) = @_;
+  return map {$_->{'widget'}} _pw_list($self);
 }
 
 sub GET_PROPERTY {
@@ -172,11 +176,11 @@ sub GET_PROPERTY {
   ### CrossHair GET_PROPERTY: $pname
 
   if ($pname eq 'widget') {
-    my $widgets = $self->{'widgets'};
-    if (@$widgets > 1) {
+    my @widgets = _widget_list($self);
+    if (@widgets > 1) {
       croak 'Cannot get single \'widget\' property when using multiple widgets';
     }
-    return $widgets->[0];
+    return $widgets[0];
   }
   if ($pname eq 'foreground_name') {
     my $foreground = $self->{'foreground'};
@@ -219,41 +223,33 @@ sub SET_PROPERTY {
   }
 
   if ($pname eq 'widgets') {
-    my $widgets = $newval;
-    ### old widgets: "$self->{'widgets'}   @{$self->{'widgets'}}"
-    ### new widgets: "$widgets   @$widgets"
-
-    _undraw ($self);
-
-    my $old_perwidget = $self->{'perwidget'};
-    my %new_perwidget;
-    $self->{'perwidget'} = \%new_perwidget;
-
-    foreach my $widget (@$widgets) {
+    my $old = $self->{'pwhash'};
+    my $new = {};
+    foreach my $widget (@$newval) {
       my $key = refaddr($widget);
-      ### perwidget key: refaddr($widget)
-      unless ($new_perwidget{$key} = $old_perwidget->{$key}) {
-        _pw_new($self,$widget);
-      }
+      $new->{$key} = $old->{$key}
+        || Gtk2::Ex::CrossHair::PerWidget->new
+          (widget => $widget,
+           crosshair => $self);
     }
-    undef $old_perwidget; # discard pw's of old widgets
-    ### perwidget keys now: keys %{$self->{'perwidget'}}
-
-    @{$self->{'widgets'}} = @$newval;  # copy contents
+    $self->{'pwhash'} = $new;
+    ### perwidget keys now: keys %{$self->{'pwhash'}}
 
     my $xy_widget = $self->{'xy_widget'};
     my $root_x = $self->{'root_x'};
     my $root_y = $self->{'root_y'};
     if ($xy_widget && ! _pw($self,$xy_widget)) {
       ### xy_widget removed
-      unless ($self->{'xy_widget'} = $xy_widget = List::Util::first
-              {_widget_contains_root_xy ($_, $root_x, $root_y)} @$widgets) {
+      unless ($self->{'xy_widget'}
+              = $xy_widget
+              = List::Util::first (sub {_widget_contains_root_xy ($_, $root_x, $root_y)},
+                                   _widgets_list($self))) {
         # no drawing when not in any widget, per _do_leave_notify()
         undef $root_x;
         undef $root_y;
       }
     }
-    _maybe_move ($self, $xy_widget, $root_x, $root_y);
+    $self->_maybe_move (_pw($xy_widget), $root_x, $root_y);
     _wcursor_update ($self); # new widget set
     $self->notify ('widget');
 
@@ -283,50 +279,13 @@ sub SET_PROPERTY {
       $self->notify('foreground-name');
       $self->notify('foreground-gdk');
     }
-    _undraw ($self);
-    foreach my $pw (_pw_list($self)) {
-      delete $pw->{'gc'}; # new gc's for colour or width
-    }
     $self->{$pname} = $newval;
-    _draw ($self);
+    foreach my $pw (_pw_list($self)) {
+      $pw->change_gc; # new gc's for colour or width
+    }
   }
 
   $self->{$pname} = $newval;  # per default GET_PROPERTY
-}
-
-sub _pw_new {
-  my ($self, $widget) = @_;
-  ### _pw_new(): "$widget"
-
-  # These are events needed in button drag mode, ie. when start() is called
-  # with a button event.  The alternative would be to turn them on by a new
-  # Gtk2::Gdk->pointer_grab() to change the implicit grab, though
-  # 'button-release-mask' is best turned on in advance in case we're lagged
-  # and it happens before we change the event mask.
-  #
-  # 'exposure-mask' is not here since if nothing else is drawing then
-  # there's no need for the crosshair to redraw over its changes.
-
-  require Gtk2::Ex::WidgetEvents;
-  my $wevents = Gtk2::Ex::WidgetEvents->new
-    ($widget, ['button-motion-mask',
-               'button-release-mask',
-               'pointer-motion-mask',
-               'enter-notify-mask',
-               'leave-notify-mask']);
-
-  my $ref_weak_self = Gtk2::Ex::Xor::_ref_weak ($self);
-  $self->{'perwidget'}->{refaddr($widget)}
-    = { wevents => $wevents,
-        static_ids => Glib::Ex::SignalIds->new
-        ($widget, $widget->signal_connect (style_set => \&_do_style_set,
-                                           $ref_weak_self)),
-      };
-
-  if ($self->{'active'}) {
-    _pw_start ($self, $widget);
-    _draw ($self, [$widget]);
-  }
 }
 
 sub start {
@@ -380,8 +339,8 @@ sub start {
   $self->{'root_x'} = $root_x;
   $self->{'root_y'} = $root_y;
 
-  foreach my $widget (@$widgets) {
-    _pw_start ($self, $widget);
+  foreach my $pw (_pw_list($self)) {
+    $pw->start;
   }
 
   $self->notify('active');
@@ -400,35 +359,14 @@ sub _wcursor_update {
       };
 }
 
-sub _pw_start {
-  my ($self, $widget) = @_;
-  ### CrossHair _pw_start(): "$widget"
-
-  my $ref_weak_self = Gtk2::Ex::Xor::_ref_weak ($self);
-  _pw($self,$widget)->{'dynamic_ids'} = Glib::Ex::SignalIds->new
-    ($widget,
-     $widget->signal_connect (motion_notify_event => \&_do_motion_notify,
-                              $ref_weak_self),
-     $widget->signal_connect (button_release_event => \&_do_button_release,
-                              $ref_weak_self),
-     $widget->signal_connect (enter_notify_event => \&_do_enter_notify,
-                              $ref_weak_self),
-     $widget->signal_connect (leave_notify_event => \&_do_leave_notify,
-                              $ref_weak_self),
-     $widget->signal_connect_after (expose_event => \&_do_expose_event,
-                                    $ref_weak_self),
-     $widget->signal_connect_after (size_allocate => \&_do_size_allocate,
-                                    $ref_weak_self));
-}
-
 sub end {
   my ($self) = @_;
   if (! $self->{'active'}) { return; }
 
   $self->signal_emit ('moved', undef, undef, undef);
-  _undraw ($self);
+  _undraw_all ($self);
   foreach my $pw (_pw_list($self)) {
-    delete $pw->{'dynamic_ids'};
+    $pw->end;
   }
   $self->{'active'} = 0;
   _wcursor_update ($self);
@@ -438,70 +376,11 @@ sub end {
 
 #-----------------------------------------------------------------------------
 
-# 'motion-notify-event' on a target widget
-sub _do_motion_notify {
-  my ($widget, $event, $ref_weak_self) = @_;
-  ### CrossHair _do_motion_notify(): "$widget " . $event->x_root . "," . $event->y_root
-  if (my $self = $$ref_weak_self) {
-    if ($self->{'active'}) {
-      _maybe_move ($self, $widget, _event_root_coords ($event));
-    }
-  }
-  return 0; # Gtk2::EVENT_PROPAGATE
-}
-
-# 'size-allocate' signal on a widget
-sub _do_size_allocate {
-  my ($widget, $alloc, $ref_weak_self) = @_;
-  my $self = $$ref_weak_self || return;
-  ### CrossHair _do_size_allocate: "$widget"
-
-  # if the widget position has changed then must draw lines at new spots
-  _undraw ($self, [$widget]);
-  _draw ($self, [$widget]);
-}
-
-# 'enter-notify-event' signal on the widgets
-sub _do_enter_notify {
-  my ($widget, $event, $ref_weak_self) = @_;
-  ### CrossHair _do_enter_notify(): "$widget " . $event->x_root . "," . $event->y_root
-  if (my $self = $$ref_weak_self) {
-    if (! $self->{'button'}) {
-      # not button drag mode
-      _maybe_move ($self, $widget, $event->root_coords);
-    }
-  }
-  return 0; # Gtk2::EVENT_PROPAGATE
-}
-
-# 'leave-notify-event' signal on one of the widgets
-sub _do_leave_notify {
-  my ($widget, $event, $ref_weak_self) = @_;
-  ### CrossHair _do_leave_notify(): "$widget " . $event->x_root . "," . $event->y_root
-  if (my $self = $$ref_weak_self) {
-    if (! $self->{'button'}) {
-      # not button drag mode
-      _maybe_move ($self, undef, undef, undef);
-    }
-  }
-  return 0; # Gtk2::EVENT_PROPAGATE
-}
-
-# 'button-release-event' signal on one of the widgets
-sub _do_button_release {
-  my ($widget, $event, $ref_weak_self) = @_;
-  if (my $self = $$ref_weak_self) {
-    if ($event->button == $self->{'button'}) {
-      $self->end ($event);
-    }
-  }
-  return 0; # Gtk2::EVENT_PROPAGATE
-}
-
 sub _maybe_move {
-  my ($self, $widget, $root_x, $root_y) = @_;
+  my ($self, $pw, $root_x, $root_y) = @_;
   #### _maybe_move: "@{[$widget||'[undef]']}", $root_x, $root_y
 
+  my $widget = $pw && $pw->{'widget'};
   $self->{'xy_widget'} = $widget;
   $self->{'root_x'} = $root_x;
   $self->{'root_y'} = $root_y;
@@ -527,7 +406,7 @@ sub _sync_call_handler {
   $self->{'sync_call'} = undef;
   if (! $self->{'active'}) { return; }  # turned off before sync returned
 
-  _undraw ($self);  # erase old
+  _undraw_all ($self);  # erase old
   _draw ($self);    # draw new
 
   my ($xy_widget, $x, $y);
@@ -537,115 +416,15 @@ sub _sync_call_handler {
   $self->signal_emit ('moved', $xy_widget, $x, $y);
 }
 
-sub _do_expose_event {
-  my ($widget, $event, $ref_weak_self) = @_;
-  ### CrossHair _do_expose_event()
-  if (my $self = $$ref_weak_self) {
-    _draw ($self, [$widget], $event->region);
-  }
-  return 0; # Gtk2::EVENT_PROPAGATE
-}
-
-sub _undraw {
+sub _undraw_all {
   my ($self, $widgets) = @_;
   $widgets ||= $self->{'widgets'};
-  ### _undraw(): "@$widgets"
+  ### CrossHair _undraw_all(): "@$widgets"
 
-  my @widgets = grep { exists(_pw($self,$_)->{'x'}) } @$widgets;
-  _draw ($self, \@widgets);
-  foreach my $widget (@widgets) {
-    # position undetermined as well as undrawn
-    delete _pw($self,$widget)->{'x'};
+  foreach my $pw (values %{$self->{'pwhash'}}) {
+    $pw->undraw;
   }
-  ### _undraw() done
-}
-
-# $widgets is an arrayref of widgets to draw, or undef for all
-sub _draw {
-  my ($self, $widgets, $clip_region) = @_;
-  $self->{'active'} || return;
-  $widgets ||= $self->{'widgets'};
-  my $root_x = $self->{'root_x'};
-  my $root_y = $self->{'root_y'};
-
-  foreach my $widget (@$widgets) {
-    ### _draw(): "$widget"
-    my $pw = _pw($self,$widget);
-    my $win = $widget->Gtk2_Ex_Xor_window || next; # perhaps unrealized
-
-    if (! exists $pw->{'x'}) {
-      ### establish draw position: "$widget", $root_x, $root_y
-      @{$pw}{'x','y'}
-        = (defined $root_x
-           ? Gtk2::Ex::WidgetBits::xy_root_to_widget ($widget, $root_x, $root_y)
-           : ());
-      ### at: $pw->{'x'}, $pw->{'y'}
-    }
-
-    my $x = $pw->{'x'};
-    if (! defined $x) { next; }
-    my $y = $pw->{'y'};
-
-    my $gc = ($pw->{'gc'} ||= do {
-      ### create gc
-      my $line_width = $self->get('line_width');
-      my $line_style = $self->{'line_style'} || 'double-dash';
-      Gtk2::Ex::Xor::shared_gc
-          (widget         => $widget,
-           foreground_xor => $self->{'foreground'},
-           background     => 0,  # no change
-           line_width     => $line_width,
-           line_style     => $line_style,
-           fill           => 'stippled',
-           cap_style      => 'projecting',
-           ($line_style eq 'solid' ? ()
-            : (dash_list => [ ($line_width || 1) * 4 ])),
-           # subwindow_mode => 'include_inferiors',
-          );
-    });
-
-    if ($win != $widget->window) {
-      # if the operative Gtk2_Ex_Xor_window is not the main widget window,
-      # then adjust from widget coordinates to the $win subwindow
-      my ($wx, $wy) = $win->get_position;
-      ### subwindow offset: "$wx,$wy"
-      $x -= $wx;
-      $y -= $wy;
-    }
-
-    my ($x_lo, $y_lo, $x_hi, $y_hi);
-    if ($widget->get_flags & 'no-window') {
-      my $alloc = $widget->allocation;
-      $x_lo = $alloc->x;
-      $x_hi = $alloc->x + $alloc->width - 1;
-      $y_lo = $alloc->y;
-      $y_hi = $alloc->y + $alloc->height - 1;
-      $x += $x_lo;
-      $y += $y_lo;
-    } else {
-      ($x_hi, $y_hi) = $win->get_size;
-      $x_lo = 0;
-      $y_lo = 0;
-    }
-
-    if ($clip_region) { $gc->set_clip_region ($clip_region); }
-    $win->draw_segments
-      ($gc,
-       $x_lo,$y, $x_hi,$y,  # horizontal
-       $x,$y_lo, $x,$y_hi); # vertical
-    if ($clip_region) { $gc->set_clip_region (undef); }
-  }
-}
-
-# 'style-set' signal handler on each widget
-# A style change normally provokes a full redraw.  Think it's enough to rely
-# on that for redrawing the crosshair against a possible new background, so
-# just refresh the gc.
-sub _do_style_set {
-  my ($widget, $prev_style, $ref_weak_self) = @_;
-  ### CrossHair _do_style_set: "$widget"
-  my $self = $$ref_weak_self || return;
-  delete _pw($self,$widget)->{'gc'}; # possible new colour
+  ### CrossHair _undraw_all() done
 }
 
 
@@ -871,11 +650,6 @@ A single widget to operate on.  The C<widget> and C<widgets> properties
 access the same underlying set of widgets to operate on, you can set or get
 whichever best suits.  But if there's more than one widget you can't get
 from the single C<widget>.
-
-=item C<add-widget> (C<Gtk2::Widget>, write-only)
-
-Add a widget to those in the crosshair.  This is good for use from
-C<Gtk2::Builder> where a C<widgets> arrayref cannot be set.
 
 =item C<foreground> (colour scalar, default C<undef>)
 

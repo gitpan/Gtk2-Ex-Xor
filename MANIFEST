@@ -14,6 +14,8 @@ devel/cross-new-xy.pl
 devel/cross-screenshot.pl
 devel/cross-toplevels.pl
 devel/cross.pl
+devel/CrossHair/PerWidget.pm
+devel/CrossHair/PW.pm
 devel/cursor-pixmap.pl
 devel/gnome-canvas.pl
 devel/GNUmakefile
@@ -34,6 +36,7 @@ devel/unused.pl
 devel/viviani.pl
 devel/Xor-class.pm
 examples/cross-area.pl
+examples/cross-builder.pl
 examples/cross-label.pl
 examples/cross-textview.pl
 examples/lasso-area.pl
@@ -49,6 +52,7 @@ MANIFEST			This list of files
 MANIFEST.SKIP
 README
 SIGNATURE
+t/CrossHair-builder.t
 t/CrossHair-overload.t
 t/CrossHair.t
 t/Lasso.t
