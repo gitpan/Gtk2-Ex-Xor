@@ -1,4 +1,4 @@
-# Copyright 2007, 2008, 2009, 2010 Kevin Ryde
+# Copyright 2007, 2008, 2009, 2010, 2011 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -33,7 +33,7 @@ use Gtk2::Ex::WidgetBits 31; # v.31 for xy_root_to_widget()
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 20;
+our $VERSION = 21;
 
 # In each CrossHair the private fields are
 #
@@ -86,56 +86,64 @@ use Glib::Object::Subclass
              },
   properties => [ Glib::ParamSpec->scalar
                   ('widgets',
-                   'widgets',
+                   'Widgets',
                    'Arrayref of widgets to act on.',
                    Glib::G_PARAM_READWRITE),
 
                   Glib::ParamSpec->object
                   ('widget',
-                   'widget',
+                   'Widget',
                    'Single widget to act on.',
                    'Gtk2::Widget',
                    Glib::G_PARAM_READWRITE),
 
                   Glib::ParamSpec->object
                   ('add-widget',
-                   'add-widget',
+                   'Add widget',
                    'Add a widget to act on.',
                    'Gtk2::Widget',
                    'writable'),
 
                   Glib::ParamSpec->boolean
                   ('active',
-                   'active',
+                   'Active',
                    'Whether to display the crosshair.',
                    0,
                    Glib::G_PARAM_READWRITE),
 
                   Glib::ParamSpec->scalar
                   ('foreground',
-                   'foreground',
+                   (do { # translation from Gtk2::TextTag
+                     my $str = 'Foreground colour';
+                     eval { require Locale::Messages;
+                            Locale::Messages::dgettext('gtk20-properties',$str)
+                            } || $str }),
                    'The colour to draw the crosshair, either a string name (including hex RGB), a Gtk2::Gdk::Color, or undef for the widget\'s style foreground.',
                    Glib::G_PARAM_READWRITE),
 
-                 Glib::ParamSpec->string
-                 ('foreground-name',
-                  'foreground-name',
-                  'The colour to draw the crosshair, as a string colour name.',
-                   (eval {Glib->VERSION(1.240);1}  
+                  Glib::ParamSpec->string
+                  ('foreground-name',
+                   (do { # translation from Gtk2::TextTag
+                     my $str = 'Foreground colour name';
+                     eval { require Locale::Messages;
+                            Locale::Messages::dgettext('gtk20-properties',$str)
+                            } || $str }),
+                   'The colour to draw the crosshair, as a string colour name.',
+                   (eval {Glib->VERSION(1.240);1}
                     ? undef # default
                     : ''),  # no undef/NULL before Perl-Glib 1.240
-                  Glib::G_PARAM_READWRITE),
+                   Glib::G_PARAM_READWRITE),
 
-                 Glib::ParamSpec->boxed
-                 ('foreground-gdk',
-                  'foreground-gdk',
-                  'The colour to draw the crosshair, as a Gtk2::Gdk::Color object with red,greed,blue fields set (a pixel is looked up on each target widget).',
-                  'Gtk2::Gdk::Color',
-                  Glib::G_PARAM_READWRITE),
+                  Glib::ParamSpec->boxed
+                  ('foreground-gdk',
+                   'Foreground colour object',
+                   'The colour to draw the crosshair, as a Gtk2::Gdk::Color object with red,greed,blue fields set (a pixel is looked up on each target widget).',
+                   'Gtk2::Gdk::Color',
+                   Glib::G_PARAM_READWRITE),
 
                   Glib::ParamSpec->int
                   ('line-width',
-                   'line-width',
+                   'Line width',
                    'The width of the cross lines drawn.',
                    0, POSIX::INT_MAX(),  # limits
                    0,                    # default
@@ -991,7 +999,7 @@ L<http://user42.tuxfamily.org/gtk2-ex-xor/index.html>
 
 =head1 LICENSE
 
-Copyright 2007, 2008, 2009, 2010 Kevin Ryde
+Copyright 2007, 2008, 2009, 2010, 2011 Kevin Ryde
 
 Gtk2-Ex-Xor is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free

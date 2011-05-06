@@ -1,4 +1,4 @@
-# Copyright 2007, 2008, 2009, 2010 Kevin Ryde
+# Copyright 2007, 2008, 2009, 2010, 2011 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -26,7 +26,7 @@ use List::Util;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 20;
+our $VERSION = 21;
 
 my $cache;
 
@@ -161,6 +161,18 @@ sub _dash_list_is_default {
   return ! (defined $dash_list
             && List::Util::first {$_ != 4} @$dash_list);
 }
+# sub _dash_lists_equal {
+#   my @pos = (0) x @_;
+#   my $maxlen = gcd (map {scalar(@{$_})} @_);
+#   foreach (1 .. $maxlen) {
+#     $want = $_[0]->[$pos[0]++];
+#     if ($pos[0] > @{$_[0]}) { $pos[0] = 0; }
+# 
+#   foreach (@_) {
+#   my ($d1, $d2) = @_;
+#   return ! (defined $dash_list
+#             && List::Util::first {$_ != 4} @$dash_list);
+# }
 
 sub _event_widget_coords {
   my ($widget, $event) = @_;

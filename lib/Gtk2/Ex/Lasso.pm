@@ -1,4 +1,4 @@
-# Copyright 2007, 2008, 2009, 2010 Kevin Ryde
+# Copyright 2007, 2008, 2009, 2010, 2011 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -22,6 +22,7 @@ use warnings;
 use Carp;
 use List::Util qw(min max);
 use Scalar::Util 'blessed';
+use Gtk2::Ex::GdkBits 38;  # v.38 for draw_rectangle_corners()
 use Glib::Ex::SignalIds;
 
 # 1.200 for Gtk2::GC auto-release and GDK_CURRENT_TIME
@@ -31,7 +32,7 @@ use Gtk2::Ex::Xor;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 20;
+our $VERSION = 21;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
@@ -52,27 +53,35 @@ use Glib::Object::Subclass
              },
   properties => [ Glib::ParamSpec->object
                   ('widget',
-                   'widget',
+                   'Widget',
                    'Widget to draw the lasso on.',
                    'Gtk2::Widget',
                    Glib::G_PARAM_READWRITE),
 
                   Glib::ParamSpec->boolean
                   ('active',
-                   'active',
+                   'Active',
                    'True if lassoing is being drawn, moved, etc.',
                    0, # default
                    Glib::G_PARAM_READWRITE),
 
                   Glib::ParamSpec->scalar
                   ('foreground',
-                   'foreground',
+                   (do { # translation from Gtk2::TextTag
+                     my $str = 'Foreground colour';
+                     eval { require Locale::Messages;
+                            Locale::Messages::dgettext('gtk20-properties',$str)
+                            } || $str }),
                    'The colour to draw the lasso, either a string name, an allocated Gtk2::Gdk::Color object, or undef for the widget\'s style foreground.',
                    Glib::G_PARAM_READWRITE),
 
                   Glib::ParamSpec->string
                   ('foreground-name',
-                   'foreground-name',
+                   (do { # translation from Gtk2::TextTag
+                     my $str = 'Foreground colour name';
+                     eval { require Locale::Messages;
+                            Locale::Messages::dgettext('gtk20-properties',$str)
+                            } || $str }),
                    'The colour to draw the lasso, as a string colour name.',
                    (eval {Glib->VERSION(1.240);1}
                     ? undef # default
@@ -81,27 +90,27 @@ use Glib::Object::Subclass
 
                   Glib::ParamSpec->boxed
                   ('foreground-gdk',
-                   'foreground-gdk',
+                   'Foreground colour object',
                    'The colour to draw the lasso, as a Gtk2::Gdk::Color object with red,greed,blue fields set (a pixel is looked up on the target widget).',
                    'Gtk2::Gdk::Color',
                    Glib::G_PARAM_READWRITE),
 
                   Glib::ParamSpec->scalar
                   ('cursor',
-                   'cursor',
+                   'Cursor',
                    'Cursor while lassoing, anything accepted by Gtk2::Ex::WidgetCursor, default \'hand1\'.',
                    Glib::G_PARAM_READWRITE),
 
                   Glib::ParamSpec->string
                   ('cursor-name',
-                   'cursor-name',
+                   'Cursor name',
                    'Cursor to show while lassoing, as cursor type enum nick, or "invisible".',
                    'hand1',
                    Glib::G_PARAM_READWRITE),
 
                   Glib::ParamSpec->boxed
                   ('cursor-object',
-                   'cursor-object',
+                   'Cursor object',
                    'Cursor to show while lassoing, as cursor object.',
                    'Gtk2::Gdk::Cursor',
                    Glib::G_PARAM_READWRITE),
@@ -511,11 +520,11 @@ sub _draw {
   });
 
   if ($clip_region) { $gc->set_clip_region ($clip_region); }
-  _gdkdrawable_draw_rectangle_corners
-    ($win, $gc,
-     0, # unfilled
-     $self->{'x1'} - $off_x, $self->{'y1'} - $off_y,
-     $self->{'x2'} - $off_x, $self->{'y2'} - $off_y);
+  Gtk2::Ex::GdkBits::draw_rectangle_corners
+      ($win, $gc,
+       0, # unfilled
+       $self->{'x1'} - $off_x, $self->{'y1'} - $off_y,
+       $self->{'x2'} - $off_x, $self->{'y2'} - $off_y);
   if ($clip_region) { $gc->set_clip_region (undef); }
   $self->{'drawn'} = 1;
 }
@@ -589,16 +598,6 @@ sub _do_grab_broken {
 
 #------------------------------------------------------------------------------
 # generic helpers
-
-# Draw a rectangle with corners at $x1,$y1 and $x2,$y2.
-sub _gdkdrawable_draw_rectangle_corners {
-  my ($drawable, $gc, $filled, $x1,$y1, $x2,$y2) = @_;
-  #### draw rect: "$x1,$y1 - $x2,$y2"
-  $drawable->draw_rectangle ($gc, $filled,
-                             min ($x1, $x2), min ($y1, $y2),
-                             abs ($x1 - $x2) + ($filled ? 1 : 0),
-                             abs ($y1 - $y2) + ($filled ? 1 : 0));
-}
 
 sub _widget_constrain_xy {
   my ($widget, $x, $y) = @_;
@@ -891,7 +890,7 @@ L<http://user42.tuxfamily.org/gtk2-ex-xor/index.html>
 
 =head1 LICENSE
 
-Copyright 2007, 2008, 2009, 2010 Kevin Ryde
+Copyright 2007, 2008, 2009, 2010, 2011 Kevin Ryde
 
 Gtk2-Ex-Xor is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free

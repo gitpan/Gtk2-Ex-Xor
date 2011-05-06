@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright 2007, 2008, 2009, 2010 Kevin Ryde
+# Copyright 2007, 2008, 2009, 2010, 2011 Kevin Ryde
 
 # This file is part of Gtk2-Ex-Xor.
 #
@@ -46,6 +46,7 @@ MyMakeMakerExtras::WriteMakefile
                     'Gtk2::Ex::KeySnooper' => 3,    # new in v.3
                     'Gtk2::Ex::SyncCall' => 12,     # v.12 for XID workaround
                     'Gtk2::Ex::WidgetEvents' => 21, # new in v.21
+                    'Gtk2::Ex::GdkBits' => 38,  # v.38 draw_rectangle_corners()
 
                     # optional for Lasso but mandatory for CrossHair
                     # version 5 for weakening fixes
@@ -59,30 +60,31 @@ MyMakeMakerExtras::WriteMakefile
                    },
 
 
-   META_MERGE
-   => { resources
-        => { homepage => 'http://user42.tuxfamily.org/gtk2-ex-xor/index.html' },
-        optional_features
-        => {
-            #             maximum_tests
-            #              => { description => 'Have "make test" do as much as possible.',
-            #                   requires => {
-            #                               },
-            #                 },
-            maximum_devel
-            => { description => 'Stuff used variously for development.',
-                 requires => { 'Gtk2::Ex::Dragger'    => 0,
-                               'Gtk2::Ex::TickerView' => 0,
-                               'Devel::FindRef'       => 0,
-                               'Devel::StackTrace'    => '1.19',
-                               'Goo::Canvas'          => 0,
-                               'Gnome2::Canvas'       => 0,
-                             } },
-           },
+   META_MERGE =>
+   { resources =>
+     { homepage => 'http://user42.tuxfamily.org/gtk2-ex-xor/index.html' },
+     optional_features =>
+     {
+      #             maximum_tests
+      #              => { description => 'Have "make test" do as much as possible.',
+      #                   requires => {
+      #                               },
+      #                 },
 
-        # use of "package Gtk2::Bin" adding a private method
-        no_index => { package => [ 'Gtk2::Bin' ], },
-      },
+      maximum_devel =>
+      { description => 'Stuff used variously for development.',
+        requires => { 'Gtk2::Ex::Dragger'    => 0,
+                      'Gtk2::Ex::TickerView' => 0,
+                      'Devel::FindRef'       => 0,
+                      'Devel::StackTrace'    => '1.19',
+                      'Goo::Canvas'          => 0,
+                      'Gnome2::Canvas'       => 0,
+                    } },
+     },
+
+     # use of "package Gtk2::Bin" adding a private method
+     no_index => { package => [ 'Gtk2::Bin' ], },
+   },
   );
 
 #------------------------------------------------------------------------------
