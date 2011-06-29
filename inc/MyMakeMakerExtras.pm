@@ -30,7 +30,7 @@ sub WriteMakefile {
 
   if (exists $opts{'META_MERGE'}) {
     # cf. ExtUtils::MM_Any::metafile_data() default ['t','inc']
-    foreach ('devel', 'examples', 'junk', 'maybe') {
+    foreach ('xt', 'devel', 'examples', 'junk', 'maybe') {
       my $dir = $_;
       if (-d $dir) {
         push @{$opts{'META_MERGE'}->{'no_index'}->{'directory'}}, $dir;
@@ -43,7 +43,14 @@ sub WriteMakefile {
     _meta_merge_shared_devel (\%opts);
   }
 
+  if (! defined $opts{'clean'}->{'FILES'}) {
+    $opts{'clean'}->{'FILES'} = '';
+  }
   $opts{'clean'}->{'FILES'} .= ' temp-lintian $(MY_HTML_FILES)';
+
+  if (! defined $opts{'realclean'}->{'FILES'}) {
+    $opts{'realclean'}->{'FILES'} = '';
+  }
   $opts{'realclean'}->{'FILES'} .= ' TAGS';
 
   if (! defined &MY::postamble) {
@@ -316,6 +323,7 @@ myman:
 
 # find files in the dist with mod times this year, but without this year in
 # the copyright line
+MY_HIDE=
 check-copyright-years:
 	year=`date +%Y`; \
 	tar tvfz $(DISTVNAME).tar.gz \
@@ -333,7 +341,9 @@ check-copyright-years:
 	      | version.texi | */version.texi \
 	      | *utf16* | examples/rs''s2lea''fnode.conf \
 	      | */MathI''mage/ln2.gz | */MathI''mage/pi.gz \
-	      | *.mo | *.locatedb* | t/samp.*) \
+	      | *.mo | *.locatedb* | t/samp.* \
+	      | t/empty.dat | t/*.xpm | t/*.xbm | t/*.jpg | t/*.gif \
+	      | t/*.g$(MY_HIDE)d) \
 	        continue ;; \
 	      *.gz) GREP=zgrep ;; \
 	    esac; \
@@ -348,7 +358,7 @@ check-copyright-years:
 	  exit $$result)
 
 check-spelling:
-	if find . -type f | egrep -v '(Makefile|dist-deb)' | xargs egrep --color=always -nHi '[r]ectanglar|[a]vailabe|[g]rabing|[c]usor|[r]efering|[w]riteable|[n]ineth|\b[o]mmitt?ed|[o]mited|[$$][rd]elf|[r]equrie|[n]oticable|[c]ontinous|[e]xistant|[e]xplict|[a]gument|[d]estionation|\b[t]he the\b|\b[i]n in\b|\b[tw]hen then\b|\b[n]ote sure\b'; \
+	if find . -type f | egrep -v '(Makefile|dist-deb)' | xargs egrep --color=always -nHi '[a]djustement|[g]lpyh|[r]ectanglar|[a]vailabe|[g]rabing|[c]usor|[r]efering|[w]riteable|[n]ineth|\b[o]mmitt?ed|[o]mited|[$$][rd]elf|[r]equrie|[n]oticable|[c]ontinous|[e]xistant|[e]xplict|[a]gument|[d]estionation|\b[t]he the\b|\b[i]n in\b|\b[tw]hen then\b|\b[n]ote sure\b'; \
 	then false; else true; fi
 HERE
 

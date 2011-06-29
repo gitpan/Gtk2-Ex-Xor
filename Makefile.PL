@@ -65,6 +65,11 @@ MyMakeMakerExtras::WriteMakefile
      { homepage => 'http://user42.tuxfamily.org/gtk2-ex-xor/index.html' },
      optional_features =>
      {
+      maximum_interoperation =>
+      { description => 'Have maximum inter-operation with other modules (optional other stuff).',
+        requires => { 'Locale::Messages' => 0 },
+      },
+
       #             maximum_tests
       #              => { description => 'Have "make test" do as much as possible.',
       #                   requires => {

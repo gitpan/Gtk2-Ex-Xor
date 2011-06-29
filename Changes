@@ -16,6 +16,9 @@ You should have received a copy of the GNU General Public License
 along with Gtk2-Ex-Xor.  If not, see <http://www.gnu.org/licenses/>.
 
 
+Version 22, June 2011
+    - tests Lasso allow for pointer already grabbed
+
 Version 21, May 2011
     - Lasso use GdkBits draw_rectangle_corners()
 

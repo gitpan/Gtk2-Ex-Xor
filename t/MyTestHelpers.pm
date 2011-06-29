@@ -110,10 +110,12 @@ sub findrefs {
 sub test_weaken_show_leaks {
   my ($leaks) = @_;
   $leaks || return;
-  MyTestHelpers::diag ("Test-Weaken:");
-  MyTestHelpers::dump ($leaks);
 
   my $unfreed = $leaks->unfreed_proberefs;
+  my $unfreed_count = scalar(@$unfreed);
+  MyTestHelpers::diag ("Test-Weaken leaks $unfreed_count objects");
+  MyTestHelpers::dump ($leaks);
+
   my $proberef;
   foreach $proberef (@$unfreed) {
     MyTestHelpers::diag ("  unfreed ", $proberef);
@@ -156,7 +158,9 @@ sub main_iterations {
 #
 sub warn_suppress_gtk_icon {
   my ($message) = @_;
-  unless ($message =~ /Gtk-WARNING.*icon/) {
+  unless ($message =~ /Gtk-WARNING.*icon/
+         || $message =~ /\Qrecently-used.xbel/
+         ) {
     warn @_;
   }
 }
@@ -227,7 +231,7 @@ sub wait_for_event {
        return 1; # Glib::SOURCE_CONTINUE (new in Glib 1.220)
      });
   if ($widget->can('get_display')) {
-    # GdkDisplay new in Gtk 2.2
+    # display new in Gtk 2.2
     $widget->get_display->sync;
   } else {
     # in Gtk 2.0 gdk_flush() is a sync actually
@@ -252,7 +256,8 @@ sub wait_for_event {
 
 sub X11_chosen_screen_number {
   my ($X) = @_;
-  foreach my $i (0 .. $#{$X->{'screens'}}) {
+  my $i;
+  foreach (0 .. $#{$X->{'screens'}}) {
     if ($X->{'screens'}->[$i]->{'root'} == $X->{'root'}) {
       return $i;
     }

@@ -39,10 +39,25 @@ MyTestHelpers::glib_gtk_versions();
 
 plan tests => 58;
 
+
+sub my_lasso_start {
+  my ($lasso) = @_;
+  my $oldwarn = $SIG{'__WARN__'};
+  local $SIG{'__WARN__'} = sub {
+    my ($str) = @_;
+    if ($str =~ /^Lasso->start\(\): cannot grab pointer/) {
+      diag $str;
+    } else {
+      $oldwarn->(@_);
+    }
+  };
+  $lasso->start;
+}
+
 #------------------------------------------------------------------------------
 # VERSION
 
-my $want_version = 21;
+my $want_version = 22;
 is ($Gtk2::Ex::Lasso::VERSION, $want_version, 'VERSION variable');
 is (Gtk2::Ex::Lasso->VERSION,  $want_version, 'VERSION class method');
 { ok (eval { Gtk2::Ex::Lasso->VERSION($want_version); 1 },
@@ -106,7 +121,7 @@ sub leftover_fields {
   my $widget = Gtk2::Window->new ('toplevel');
   my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
   show_wait ($widget);
-  $lasso->start;
+  my_lasso_start($lasso);
   my $weak_lasso = $lasso;
   Scalar::Util::weaken ($weak_lasso);
   $lasso = undef;
@@ -123,7 +138,7 @@ sub leftover_fields {
   my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
   my $seen_notify = 0;
   $lasso->signal_connect ('notify::active' => sub { $seen_notify = 1; });
-  $lasso->start;
+  my_lasso_start($lasso);
   is ($seen_notify, 1, 'start() emits notify::active');
   $widget->destroy;
 }
@@ -133,7 +148,7 @@ sub leftover_fields {
   my $widget = Gtk2::Window->new ('toplevel');
   show_wait ($widget);
   my $lasso = Gtk2::Ex::Lasso->new (widget => $widget);
-  $lasso->start;
+  my_lasso_start($lasso);
   my $seen_notify = 0;
   $lasso->signal_connect ('notify::active' => sub { $seen_notify = 1; });
   $lasso->end;

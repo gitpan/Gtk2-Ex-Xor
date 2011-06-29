@@ -21,7 +21,7 @@ use strict;
 use warnings;
 use Carp;
 use List::Util qw(min max);
-use Scalar::Util 'blessed';
+use Scalar::Util 1.18 'blessed','refaddr'; # 1.18 for pure-perl refaddr() fix
 use Gtk2::Ex::GdkBits 38;  # v.38 for draw_rectangle_corners()
 use Glib::Ex::SignalIds;
 
@@ -32,7 +32,7 @@ use Gtk2::Ex::Xor;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 21;
+our $VERSION = 22;
 
 use constant DEFAULT_LINE_STYLE => 'on_off_dash';
 
@@ -278,7 +278,7 @@ sub start {
     # Passive grab from the button is enough, so normally $want_grab false
     # here.  But if the button press was in some other widget then the grab
     # there is no good, must have $want_grab true in that case.
-    $want_grab = (Gtk2->get_event_widget($event) != $widget);
+    $want_grab = (refaddr(Gtk2->get_event_widget($event)) != refaddr($widget));
   }
   if ($want_grab && ! $self->{'grabbed'}) {
     my $status = Gtk2::Gdk->pointer_grab
@@ -630,6 +630,8 @@ sub _event_time_maybe {
 1;
 __END__
 
+=for stopwords keypress ie Gtk Gtk2-Ex-Xor Eg timestamp ungrabbing Esc boolean enum userdata BUILDABLE colormap xors Keypresses Ryde
+
 =head1 NAME
 
 Gtk2::Ex::Lasso -- drag the mouse to lasso a rectangular region
@@ -667,7 +669,7 @@ feedback while selecting.
         |                         |
         +-------------------------+
 
-The lasso is activated by the C<start> function (see L</FUNCTIONS> below),
+The lasso is activated by the C<start()> function (see L</FUNCTIONS> below),
 normally called from a button press or keypress event handler.  When started
 from a button the lasso is active while the button is held down, ie. a drag.
 This is usual, but it can also begin from a keypress or even something
@@ -682,6 +684,9 @@ The following keys are recognised while lassoing,
 Other keys are propagated to normal processing.  The space to "swap" lets
 you move the initial corner if you didn't start at the right spot or change
 your mind.  (This swap is only possible in Gtk 2.8 and up.)
+
+See F<examples/lasso-area.pl> in the Gtk2-Ex-Xor sources for a complete
+sample program.
 
 =head1 FUNCTIONS
 
@@ -745,7 +750,7 @@ active stands a good chance of confusing the user.
 =item C<active> (boolean, default false)
 
 True while lasso selection is in progress.  Turning this on or off is the
-same as calling C<start> or C<end> above (except you can't pass events).
+same as calling C<start> or() C<end()> above (except you can't pass events).
 
 =item C<foreground> (scalar, default C<undef>)
 
@@ -850,12 +855,15 @@ with the C<widget> property telling it what to act on.
       <signal name="ended" handler="do_lasso_ended"/>
     </object>
 
+See F<examples/lasso-builder.pl> in the Gtk2-Ex-Xor sources for a complete
+program.
+
 The C<foreground-name> property is the best way to control the colour.  The
-generic C<foreground> can't be used because it's a Perl scalar type.  The
-C<foreground-gdk> works since C<Gtk2::Builder> knows how to parse a colour
-name to a C<Gtk2::Gdk::Color> object, but the Builder also allocates a pixel
-in the default colormap, which is unnecessary as the Lasso will do that
-itself on the target widget's colormap.
+generic C<foreground> can't be used because it's a Perl scalar type.
+C<foreground-gdk> works too since C<Gtk2::Builder> knows how to parse a
+colour name to a C<Gtk2::Gdk::Color> object, but in that case the Builder
+also allocates a pixel in the default colormap, which is unnecessary since
+the Lasso will do that itself on the target widget's colormap.
 
 The C<cursor-name> property is similarly the best way to control the mouse
 cursor type, if the default hand is not wanted.  The generic C<cursor>
@@ -876,12 +884,18 @@ When the lasso is started from a keypress etc, not a button drag, an
 explicit pointer grab is used so motion events outside the widget window are
 seen.  In the current code a further C<start> call with a button press event
 will switch to drag mode, so the corresponding release has the expected
-effect.  But perhaps that's a bit obscure, so maybe in the future this will
-change.
+effect.  But that's a bit obscure and might change.
+
+If C<start()> wants an explicit grab but can't get it (because another
+application or button hold down has a grab) then in the current code it
+carps a warning and continues anyway.  Perhaps that will change, though it
+only affects the slightly unusual case of a keyboard initiated lasso.
 
 =head1 SEE ALSO
 
-L<Gtk2::Ex::CrossHair>, L<Gtk2::Ex::Xor>, L<Glib::Object>,
+L<Gtk2::Ex::CrossHair>,
+L<Gtk2::Ex::Xor>,
+L<Glib::Object>,
 L<Gtk2::Ex::WidgetCursor>
 
 =head1 HOME PAGE

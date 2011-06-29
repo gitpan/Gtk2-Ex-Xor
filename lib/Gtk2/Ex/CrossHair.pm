@@ -33,7 +33,7 @@ use Gtk2::Ex::WidgetBits 31; # v.31 for xy_root_to_widget()
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 21;
+our $VERSION = 22;
 
 # In each CrossHair the private fields are
 #
@@ -769,6 +769,8 @@ sub _widget_contains_xy {
 1;
 __END__
 
+=for stopwords crosshair CrossHair WidgetCursor xors Gtk2-Ex-Xor Eg keypress boolean arrayref toplevel userdata eg BUILDABLE colormap crosshaired Ryde
+
 =head1 NAME
 
 Gtk2::Ex::CrossHair -- crosshair lines drawn following the mouse
@@ -811,20 +813,21 @@ intended as a visual guide for the user.
 The idea is to help see relative positions.  For example in a graph the
 horizontal line helps you see which of two peaks is the higher, and the
 vertical line can extend down to (or into) an X axis scale to see where
-exactly a particular part of the graph lies.
+exactly a part of the graph lies.
 
 The C<moved> callback lets you update a text status line with a position in
-figures, etc (if you don't display something like that following the mouse
-all the time).
+figures, etc (if you don't already display something like that following the
+mouse all the time).
 
-While the crosshair is active the mouse cursor is set invisible in the
-target windows since the cross is enough feedback and a cursor tends to
-obscure the lines.  This is done with the WidgetCursor mechanism (see
-L<Gtk2::Ex::WidgetCursor>) and so cooperates with other widget or
+When the crosshair is active the mouse cursor is set invisible in the target
+windows since the cross is enough feedback and a cursor tends to obscure the
+lines.  This is done with the WidgetCursor mechanism (see
+L<Gtk2::Ex::WidgetCursor>) and so cooperates with other module or
 application uses of that.
 
 The crosshair is drawn using xors in the widget window (see
-L<Gtk2::Ex::Xor>).
+L<Gtk2::Ex::Xor>).  See the F<examples> directory in the Gtk2-Ex-Xor sources
+for some variously contrived complete programs.
 
 =head1 FUNCTIONS
 
@@ -964,12 +967,15 @@ object with the C<widget> property telling it what to act on.
       <signal name="moved" handler="do_cross_moved"/>
     </object>
 
+See F<examples/cross-builder.pl> in the Gtk2-Ex-Xor sources for a complete
+program.
+
 The C<foreground-name> property is the best way to control the colour.  The
 generic C<foreground> can't be used because it's a Perl scalar type.  The
 C<foreground-gdk> works since C<Gtk2::Builder> knows how to parse a colour
-name to a C<Gtk2::Gdk::Color> object, but the Builder also allocates a pixel
-in the default colormap, which is unnecessary as the CrossHair will do that
-itself on the target widget's colormap.
+name to a C<Gtk2::Gdk::Color> object, but in that case the Builder also
+allocates a pixel in the default colormap, which is unnecessary since the
+CrossHair will do that itself on the target widget's colormap.
 
 =head1 BUGS
 

@@ -26,7 +26,7 @@ use List::Util;
 # uncomment this to run the ### lines
 #use Smart::Comments;
 
-our $VERSION = 21;
+our $VERSION = 22;
 
 my $cache;
 
@@ -304,6 +304,8 @@ sub Gtk2::Entry::Gtk2_Ex_Xor_window {
 
 1;
 __END__
+
+=for stopwords add-ons natively bg xoring multi-window subwindow subwindows SyncCall Ryde Gtk2-Ex-Xor
 
 =head1 NAME
 
